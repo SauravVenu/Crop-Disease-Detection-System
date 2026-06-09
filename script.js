@@ -48,16 +48,20 @@ function setSavedUser(user) {
 }
 
 async function apiPost(path, payload) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || "Request failed");
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Request failed");
+    }
+    return data;
+  } catch {
+    throw new Error("Server offline. Run start_app.bat and open http://127.0.0.1:8000.");
   }
-  return data;
 }
 
 async function checkApi() {

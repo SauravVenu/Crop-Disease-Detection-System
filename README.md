@@ -25,7 +25,7 @@ The chat endpoint is keyword-based today, so it uses regex matching rather than 
 
 ## Login
 
-Use an email id and password to create an account or sign in. Duplicate email ids are rejected, and incorrect email/password combinations are blocked.
+Use a valid email address and password to create an account or sign in. Duplicate email ids are rejected, and incorrect email/password combinations are blocked.
 
 ## Suggested Upgrades
 

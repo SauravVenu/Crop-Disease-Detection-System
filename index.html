@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KRISHISEV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <section class="login-screen" id="loginScreen">
+    <div class="login-panel">
+      <div class="login-brand">
+        <span class="brand-mark large">K</span>
+        <div>
+          <p class="eyebrow">KRISHISEV</p>
+          
+        </div>
+      </div>
+      <form class="login-card" id="loginForm">
+        <div>
+          <p class="eyebrow">Secure sign in</p>
+          <h2>Login with email</h2>
+        </div>
+      <label>
+        Email id
+      <input id="loginEmail" type="email" placeholder="name@gmail.com" autocomplete="email" required />
+      <small class="field-hint">Use a Gmail address only. Example: name@gmail.com</small>
+      </label>
+      <label>
+        Password
+        <input id="loginPassword" type="password" placeholder="Minimum 4 characters" autocomplete="current-password" required />
+      </label>
+      <div class="auth-actions">
+        <button class="primary-button full" type="submit">Login</button>
+        <button class="ghost-button full" type="button" id="registerButton">Create account</button>
+      </div>
+      <p class="login-error" id="loginError" role="alert"></p>
+      </form>
+    </div>
+  </section>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#dashboard" aria-label="KRISHISEV home">
+        <span class="brand-mark">K</span>
+        <span>
+          <strong>KRISHISEV</strong>
+          <small>Smart farm desk</small>
+        </span>
+      </a>
+
+      <nav class="nav-list" aria-label="Primary">
+        <a class="active" href="#dashboard">
+          <span>⌂</span>
+          Dashboard
+        </a>
+        <a href="#chatbot">
+          <span>✦</span>
+          Ask Krishi
+        </a>
+        <a href="#crop">
+          <span>◎</span>
+          Crop Match
+        </a>
+        <a href="#soil">
+          <span>◌</span>
+          Soil Scan
+        </a>
+        <a href="#disease">
+          <span>◈</span>
+          Disease Scan
+        </a>
+      </nav>
+
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">AI powered farming support</p>
+          <h1>KRISHISEV</h1>
+        </div>
+        <div class="top-actions">
+          <span class="api-badge ready" id="farmerBadge">Farmer</span>
+          <span class="api-badge" id="apiBadge">Checking API</span>
+          <button class="icon-button" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">☼</button>
+          <button class="ghost-button" id="logoutButton">Logout</button>
+          <button class="primary-button" data-scroll="#chatbot">Start diagnosis</button>
+        </div>
+      </header>
+
+      <section class="hero-panel" id="dashboard">
+        <div class="hero-copy">
+          <p class="status-pill">XGBoost crop engine + ResNet disease vision</p>
+          <h2>One intelligent workspace for soil, crop and plant health decisions.</h2>
+          <p>
+            Farmers can ask questions, enter soil values, upload affected crop images and get quick,
+            actionable guidance from a single friendly farming assistant.
+          </p>
+          <div class="hero-actions">
+            <button class="primary-button" data-scroll="#crop">Recommend crop</button>
+            <button class="ghost-button" data-scroll="#disease">Scan leaf image</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="map-section">
+        <div class="tool-panel map-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Google Maps vegetation layer</p>
+              <h2>Plantation Suitability Map</h2>
+            </div>
+            <span class="status-pill compact">Green hotspots</span>
+          </div>
+          <div class="map-layout">
+            <div class="vegetation-map" id="vegetationMap" aria-label="World vegetation suitability map"></div>
+            <div class="map-sidecard">
+              <p class="map-kicker">What the green means</p>
+              <strong>More plantation, more vegetation</strong>
+              <p class="map-copy">
+                The green overlay highlights regions that are generally more suitable for plantation and dense vegetation.
+                It uses Google Maps with a heat-style overlay for the major global hotspots.
+              </p>
+              <div class="map-legend">
+                <span><i class="legend-swatch dense"></i> Dense plantation</span>
+                <span><i class="legend-swatch suitable"></i> Suitable vegetation</span>
+                <span><i class="legend-swatch light"></i> Lower coverage</span>
+              </div>
+              <p class="map-status" id="vegetationMapStatus">Loading Google Maps...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="workbench">
+        <div class="tool-panel chat-panel" id="chatbot">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Natural language support</p>
+              <h2>Ask KRISHISEV</h2>
+            </div>
+            <span class="online-dot">Online</span>
+          </div>
+          <div class="chat-window" id="chatWindow">
+            <div class="message bot">Hello farmer. Tell me your crop issue, soil condition or disease symptom.</div>
+            <div class="message user">My tomato leaves have yellow spots. What should I do?</div>
+            <div class="message bot">Upload a leaf image for disease prediction. Meanwhile, isolate affected leaves, avoid overhead watering and check humidity around the plant.</div>
+          </div>
+          <form class="chat-form" id="chatForm">
+            <input id="chatInput" type="text" placeholder="Ask about crops, pests, fertilizer or soil..." autocomplete="off" />
+            <button class="primary-button" type="submit">Send</button>
+          </form>
+        </div>
+
+        <div class="tool-panel crop-panel" id="crop">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">XGBoost recommendation</p>
+              <h2>Crop Match</h2>
+            </div>
+            <button class="ghost-button small" id="resetCrop">Reset</button>
+          </div>
+          <div class="input-grid">
+            <label>
+              Nitrogen
+              <input type="number" id="nitrogen" value="82" min="0" max="200">
+            </label>
+            <label>
+              Phosphorus
+              <input type="number" id="phosphorus" value="46" min="0" max="200">
+            </label>
+            <label>
+              Potassium
+              <input type="number" id="potassium" value="58" min="0" max="200">
+            </label>
+            <label>
+              Soil pH
+              <input type="number" id="ph" value="6.7" min="3" max="10" step="0.1">
+            </label>
+            <label>
+              Moisture %
+              <input type="number" id="moisture" value="62" min="0" max="100">
+            </label>
+            <label>
+              Rainfall mm
+              <input type="number" id="rainfall" value="128" min="0" max="500">
+            </label>
+          </div>
+          <button class="primary-button full" id="recommendButton">Get recommendation</button>
+          <div class="result-card" id="cropResult">
+            <span>Recommended crop</span>
+            <strong>Ready</strong>
+            <p>Enter soil values and run the local recommendation engine.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="soil-section" id="soil">
+        <div class="tool-panel soil-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Soil image analysis</p>
+              <h2>Soil Moisture Scan</h2>
+            </div>
+            <span class="status-pill compact">Photo based</span>
+          </div>
+          <div class="soil-workspace">
+            <label class="soil-upload-box" for="soilUpload">
+              <input id="soilUpload" type="file" accept="image/*" />
+              <img id="soilPreviewImage" alt="" />
+              <span id="soilUploadText">Drop or choose a soil image</span>
+            </label>
+            <div class="soil-report" id="soilReport">
+              <span>Soil result</span>
+              <strong>Waiting for soil image</strong>
+              <p>Upload a clear soil photo to estimate moisture and possible crops.</p>
+            </div>
+          </div>
+          <div class="soil-detail-report" id="soilDetailReport" hidden>
+            <h3>Soil Analysis Report</h3>
+            <div class="soil-report-grid">
+              <div>
+                <dt>Approx. moisture</dt>
+                <dd id="soilMoistureValue">-</dd>
+              </div>
+              <div>
+                <dt>Soil condition</dt>
+                <dd id="soilConditionValue">-</dd>
+              </div>
+              <div>
+                <dt>Minimum suitable moisture</dt>
+                <dd id="soilMinMoistureValue">-</dd>
+              </div>
+              <div>
+                <dt>Maximum suitable moisture</dt>
+                <dd id="soilMaxMoistureValue">-</dd>
+              </div>
+              <div>
+                <dt>Image signs</dt>
+                <dd id="soilSignsValue">-</dd>
+              </div>
+              <div>
+                <dt>Field advice</dt>
+                <dd id="soilAdviceValue">-</dd>
+              </div>
+            </div>
+            <div class="soil-range-graph" id="soilRangeGraph" aria-label="Soil moisture suitability chart">
+              <div class="range-track">
+                <div class="range-band" id="soilRangeBand"></div>
+                <div class="range-current" id="soilCurrentMoisture"></div>
+              </div>
+              <div class="range-labels">
+                <span id="soilRangeMinLabel">0%</span>
+                <span id="soilRangeIdealLabel">Ideal</span>
+                <span id="soilRangeMaxLabel">100%</span>
+              </div>
+            </div>
+            <h4>Crops That Can Be Planted</h4>
+            <div class="crop-list" id="soilCropList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="disease-section" id="disease">
+        <div class="tool-panel upload-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">ResNet image analysis</p>
+              <h2>Disease Scan</h2>
+            </div>
+            <span class="status-pill compact">High precision</span>
+          </div>
+          <div class="disease-workspace">
+            <label class="upload-box" for="leafUpload">
+              <input id="leafUpload" type="file" accept="image/*" />
+              <img id="previewImage" alt="" />
+              <span id="uploadText">Drop or choose a crop leaf image</span>
+            </label>
+            <div class="diagnosis" id="diagnosis">
+              <span>Prediction</span>
+              <strong>Waiting for image</strong>
+              <p>Upload a clear crop leaf photo to run local image analysis.</p>
+            </div>
+          </div>
+          <div class="leaf-report" id="leafReport" hidden>
+            <h3>Leaf Health Report</h3>
+            <dl>
+              <div>
+                <dt>Problem</dt>
+                <dd id="reportProblem">-</dd>
+              </div>
+              <div>
+                <dt>Confidence</dt>
+                <dd id="reportConfidence">-</dd>
+              </div>
+              <div>
+                <dt>Affected area</dt>
+                <dd id="reportAffectedArea">-</dd>
+              </div>
+              <div>
+                <dt>Disease severity</dt>
+                <dd id="reportSeverity">-</dd>
+              </div>
+              <div>
+                <dt>Visible signs</dt>
+                <dd id="reportSigns">-</dd>
+              </div>
+              <div>
+                <dt>Recommended action</dt>
+                <dd id="reportAction">-</dd>
+              </div>
+            </dl>
+            <div class="impact-chart" id="impactChart">
+              <h4>Disease Impact Graph</h4>
+              <div class="chart-row">
+                <span>Healthy area</span>
+                <div class="bar-track"><div class="bar healthy" id="barHealthy"></div></div>
+                <em id="barHealthyValue">0%</em>
+              </div>
+              <div class="chart-row">
+                <span>Yellow stress</span>
+                <div class="bar-track"><div class="bar yellow" id="barYellow"></div></div>
+                <em id="barYellowValue">0%</em>
+              </div>
+              <div class="chart-row">
+                <span>Brown/necrosis</span>
+                <div class="bar-track"><div class="bar brown" id="barBrown"></div></div>
+                <em id="barBrownValue">0%</em>
+              </div>
+              <div class="chart-row">
+                <span>Total affected</span>
+                <div class="bar-track"><div class="bar affected" id="barAffected"></div></div>
+                <em id="barAffectedValue">0%</em>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+  <script>
+    window.GOOGLE_MAPS_API_KEY = window.GOOGLE_MAPS_API_KEY || "";
+  </script>
+  <script src="script.js"></script>
+</body>
+</html>

@@ -75,6 +75,161 @@ CHAT_KNOWLEDGE = [
         r"\b(hello|hi|namaste|thanks|thank you)\b",
         "Hello. Share the crop name, symptoms, soil pH, moisture or recent weather and I will narrow down the advice.",
     ),
+    # --- Crop rotation and intercropping ---
+    (
+        r"\b(crop rotation|rotate crops?|intercrop|intercropping|mixed crop)\b",
+        "Crop rotation breaks pest and disease cycles, restores soil nutrients, and boosts yield. Rotate cereals with legumes (e.g., rice then chickpea) so nitrogen fixation replenishes the soil. Intercropping maize with beans or soybean is a proven combination for small farms.",
+    ),
+    # --- Composting and organic matter ---
+    (
+        r"\b(compost|composting|organic matter|vermicompost|farmyard manure|fym)\b",
+        "Composting converts crop residues, cow dung and kitchen waste into nutrient-rich humus. Maintain a 3:1 carbon-to-nitrogen ratio, keep the heap moist but not soggy, and turn it every 2 weeks. Vermicomposting with earthworms gives ready compost in 45-60 days.",
+    ),
+    # --- Organic farming ---
+    (
+        r"\b(organic farming|organic certif|zero budget|natural farming|zbnf)\b",
+        "Organic farming avoids synthetic chemicals and relies on compost, green manure, bio-fertilizers and biological pest control. Certification through agencies like APEDA or Jaivik Bharat adds market value. Zero Budget Natural Farming (ZBNF) uses jeevamrutha, beejamrutha and mulching to cut input costs.",
+    ),
+    # --- Greenhouse and polyhouse ---
+    (
+        r"\b(greenhouse|polyhouse|poly house|protected cultivation|net house)\b",
+        "Greenhouse or polyhouse farming protects crops from extreme weather, pests and heavy rains. It is ideal for high-value vegetables, flowers and seedling nurseries. Government subsidies (NHM scheme) cover 50-65% of setup cost. Ventilation and temperature control are critical for success.",
+    ),
+    # --- Hydroponics and vertical farming ---
+    (
+        r"\b(hydropon|vertical farm|soilless|aeropon|nutrient film)\b",
+        "Hydroponics grows plants in nutrient-rich water without soil, saving up to 90% water compared to field farming. Vertical farming stacks layers in a controlled environment. Popular crops include lettuce, herbs, strawberry and tomato. Initial investment is high but returns are strong near urban markets.",
+    ),
+    # --- Drip irrigation and sprinkler ---
+    (
+        r"\b(drip irrigation|sprinkler|micro.?irrigation|emitter|fertigation)\b",
+        "Drip irrigation delivers water directly to roots, saving 30-60% water and boosting yield. Government subsidies under PMKSY cover 55-80% of cost. Fertigation (fertilizer through drip) improves nutrient uptake. Clean filters regularly to prevent emitter clogging.",
+    ),
+    # --- Mulching ---
+    (
+        r"\b(mulch|mulching|plastic mulch|straw mulch)\b",
+        "Mulching with straw, dry leaves or plastic sheets conserves soil moisture, suppresses weeds and regulates soil temperature. Black plastic mulch works well for vegetables; organic mulch adds humus as it decomposes. Apply 5-10 cm thick organic mulch around plant bases.",
+    ),
+    # --- Companion planting ---
+    (
+        r"\b(companion plant|companion crop|trap crop|push.?pull)\b",
+        "Companion planting uses beneficial plant combinations: marigold repels nematodes from tomatoes, basil deters whiteflies, and legumes fix nitrogen for neighbouring cereals. Trap cropping lures pests away from the main crop. The push-pull strategy with Napier grass and Desmodium works well for maize stem borers.",
+    ),
+    # --- Seed selection ---
+    (
+        r"\b(seed select|hybrid seed|open.?pollinat|heirloom|seed treat|seed rate)\b",
+        "Choose certified seeds from ICAR-approved varieties. Hybrid seeds give higher yield but must be purchased each season. Open-pollinated and heirloom varieties allow seed saving. Treat seeds with Trichoderma or carbendazim before sowing to prevent seed-borne diseases.",
+    ),
+    # --- Harvest timing ---
+    (
+        r"\b(harvest tim|when to harvest|post.?harvest|storage loss|handling after harvest)\b",
+        "Harvest at the right maturity stage to maximize quality and shelf life. For grains, moisture should be below 14% before storage. For fruits, use the color-break stage for distant markets. Post-harvest losses can be reduced by proper drying, grading, and cold-chain management.",
+    ),
+    # --- Soil testing ---
+    (
+        r"\b(soil test|soil analysis|soil sample|soil health card|shc)\b",
+        "Collect soil samples from 15 cm depth at 8-10 random spots in the field, mix them and send 500g to your nearest Soil Health Card centre or KVK. Tests reveal pH, EC, organic carbon, N-P-K and micronutrients. Government provides free Soil Health Cards every 2 years under the SHC scheme.",
+    ),
+    # --- Crop storage and cold storage ---
+    (
+        r"\b(crop storage|cold storage|warehouse|grain storage|store grain|hermetic)\b",
+        "Store grains in clean, dry, airtight containers or hermetic bags to prevent moisture and insect damage. Neem leaves between grain layers deter storage pests. For perishables, cold storage at 2-8°C extends shelf life. Government warehousing is available through FCI and state agencies.",
+    ),
+    # --- Government schemes ---
+    (
+        r"\b(pm.?kisan|government scheme|subsidy|crop insurance|pmfby|kcc|kisan credit|nabard|e.?nam)\b",
+        "PM-KISAN provides Rs 6,000/year in 3 installments to eligible farmer families. PMFBY offers crop insurance at just 2% premium for Kharif and 1.5% for Rabi. KCC (Kisan Credit Card) gives short-term crop loans at 4% interest. Register on the eNAM portal to sell produce at the best market price nationwide.",
+    ),
+    # --- Organic pest control ---
+    (
+        r"\b(neem oil|bio.?pesticide|organic pest|trichoderma|beauveria|bt spray|panchagavya)\b",
+        "Neem oil (3-5 ml/litre) controls sucking pests and fungal spores. Trichoderma viride protects roots from soil-borne fungi. Beauveria bassiana targets borers and beetles biologically. Panchagavya and Jeevamrutha boost plant immunity. Always spray in the evening to protect beneficial insects.",
+    ),
+    # --- Weed management ---
+    (
+        r"\b(weed|weeding|herbicide|weedicide|weed control|weed management)\b",
+        "Control weeds early as they compete for nutrients and water. Use mulching, intercropping and timely hand-weeding for small fields. Pre-emergent herbicides should be applied on moist soil before weed germination. Avoid chemical herbicide drift on crop plants and always read label rates.",
+    ),
+    # --- Climate adaptation ---
+    (
+        r"\b(climate change|drought.?resist|flood.?tolerant|heat.?tolerant|climate adapt|weather risk)\b",
+        "Choose climate-resilient varieties: drought-tolerant millets and sorghum, flood-tolerant rice (Swarna-Sub1), and heat-tolerant wheat (HD-3226). Diversify crops to spread weather risk. Rainwater harvesting, farm ponds and conservation agriculture reduce climate vulnerability.",
+    ),
+    # --- Seasonal planting calendar ---
+    (
+        r"\b(kharif|rabi|zaid|season|planting calendar|sowing time|monsoon crop|winter crop|summer crop)\b",
+        "Kharif (June-Oct): rice, maize, soybean, cotton, groundnut with the monsoon. Rabi (Oct-Mar): wheat, mustard, gram, peas in the cool season. Zaid (Mar-Jun): watermelon, cucumber, moong dal in summer. Timely sowing within the first 2 weeks of the season window is critical for good yields.",
+    ),
+    # --- Plant nutrition deficiency ---
+    (
+        r"\b(iron deficiency|zinc deficiency|magnesium deficiency|calcium deficiency|boron deficiency|micro.?nutrient|deficiency symptom)\b",
+        "Iron deficiency causes interveinal chlorosis on young leaves. Zinc deficiency shows as stunted growth with small, pale leaves. Magnesium deficiency yellows older leaves between veins. Calcium deficiency causes blossom-end rot in tomato and tip-burn in lettuce. Boron deficiency leads to hollow stems and poor fruit set. Apply foliar micro-nutrient sprays as a quick fix.",
+    ),
+    # --- Banana plantation ---
+    (
+        r"\b(banana|plantain|tissue culture banana|grand naine|cavendish)\b",
+        "Banana grows best in well-drained loamy soil with pH 6.0-7.5 and regular irrigation. Use tissue culture plants (Grand Naine, G9) for uniform growth. Apply 200g N, 60g P, 300g K per plant per cycle. Protect from Panama wilt by using resistant varieties and avoiding infected soil.",
+    ),
+    # --- Mango ---
+    (
+        r"\b(mango|aam|alphonso|dasheri|langra)\b",
+        "Mango trees need full sun, well-drained soil and pH 5.5-7.5. Prune after harvest to shape the canopy and improve fruiting. Apply paclobutrazol for off-season flowering. Common issues include anthracnose (copper spray), fruit fly (methyl eugenol traps) and mango hopper (neem oil during flowering).",
+    ),
+    # --- Coconut ---
+    (
+        r"\b(coconut|copra|nariyal|coir)\b",
+        "Coconut palms thrive in coastal sandy loam with good drainage and 1500-2500 mm annual rainfall. Space trees 7.5m apart. Apply 500g urea, 700g bone meal and 1 kg potash per palm per year in two splits. Intercrop with cocoa, pineapple or banana for additional income from the same land.",
+    ),
+    # --- Tea ---
+    (
+        r"\b(tea plantation|tea garden|camellia sinensis|tea bush)\b",
+        "Tea grows at elevations of 600-2000m in acidic soil (pH 4.5-5.5) with 1500-3000 mm well-distributed rainfall. Prune bushes regularly to maintain a flat plucking table. Apply shade trees like silver oak for filtered light. Two leaves and a bud picking gives the best quality.",
+    ),
+    # --- Coffee ---
+    (
+        r"\b(coffee|arabica|robusta|coffee plantation)\b",
+        "Arabica coffee grows at higher altitudes (1000-1500m) in shade, while Robusta tolerates lower elevations and more sun. Maintain shade trees (silver oak, dadap) for 40-50% canopy cover. Coffee berry borer is the key pest; use Beauveria bassiana traps. Harvest only red-ripe cherries for premium quality.",
+    ),
+    # --- Rubber ---
+    (
+        r"\b(rubber|hevea|rubber plantation|latex tapping)\b",
+        "Rubber (Hevea brasiliensis) needs 2000+ mm rainfall, deep well-drained soil and warm tropical climate. Trees are tapped for latex after 6-7 years using the S/2 d3 tapping system. RRII 105 and RRII 430 are high-yielding Indian clones. Intercrop with pineapple or banana during immature years.",
+    ),
+    # --- Mushroom cultivation ---
+    (
+        r"\b(mushroom|oyster mushroom|button mushroom|shiitake|mushroom spawn)\b",
+        "Mushroom farming requires minimal space and water. Oyster mushrooms grow on wheat or paddy straw in 25-30°C; button mushrooms need composted substrate and cooler 16-22°C conditions. Maintain 80-90% humidity and good ventilation. A 10x10 ft room can produce 50-100 kg per cycle, making it highly profitable.",
+    ),
+    # --- Beekeeping and pollination ---
+    (
+        r"\b(beekeep|honey bee|apiculture|pollinator|pollination|bee colony)\b",
+        "Beekeeping boosts crop yield through pollination and provides honey income. Place 2-5 hives per acre near flowering crops. Apis mellifera and Apis cerana indica are common species. Avoid spraying pesticides during flowering time. Government provides training and subsidies through the National Beekeeping and Honey Mission.",
+    ),
+    # --- Farm mechanization ---
+    (
+        r"\b(tractor|farm machine|mechaniz|harvester|rotavator|power tiller|thresher|transplanter)\b",
+        "Farm mechanization saves labour and improves efficiency. Use a rotavator for field preparation, seed drill for precision sowing, and combine harvester for large-scale grain crops. Government subsidies under Sub-Mission on Agricultural Mechanization (SMAM) cover 40-50% of equipment cost for small farmers.",
+    ),
+    # --- Crop pricing and MSP ---
+    (
+        r"\b(msp|minimum support price|mandi|apmc|market price|crop price|e.?nam|selling price)\b",
+        "MSP (Minimum Support Price) is announced by the government for 23 crops each season to protect farmers from price crashes. Sell at APMC mandis or register on eNAM for nationwide buyers. Check current MSP rates on the farmer.gov.in portal. Direct marketing and FPO aggregation often fetch 10-20% above MSP.",
+    ),
+    # --- Livestock integration ---
+    (
+        r"\b(livestock|dairy|cattle|goat|poultry|cow dung|integrated farming|fish.?farm|pisciculture)\b",
+        "Integrating livestock with crops creates a circular farm economy: crop residues feed animals, cow dung and poultry litter enrich soil, and biogas from dung provides cooking fuel. Dairy with fodder crops, fish in farm ponds, and backyard poultry are low-investment models that diversify income and reduce risk.",
+    ),
+    # --- Wheat ---
+    (
+        r"\b(wheat|gehu|gehun)\b",
+        "Wheat is a Rabi crop sown in November-December. It prefers cool winters, well-drained loamy soil and pH 6.0-7.5. Apply 120 kg N, 60 kg P, 40 kg K per hectare in splits. Timely sowing before December 15 is critical; late sowing reduces yield by 25-30 kg per hectare per day of delay.",
+    ),
+    # --- Sugarcane ---
+    (
+        r"\b(sugarcane|ganna)\b",
+        "Sugarcane needs deep fertile soil, 1500-2500 mm water and 12-14 months to mature. Plant setts with 2-3 buds, apply 250 kg N per hectare in 3 splits, and use trash mulching to conserve moisture. Earthing up at 90 and 120 days supports tall canes. Watch for red rot and top borer.",
+    ),
 ]
 
 
@@ -580,6 +735,38 @@ def analyze_soil_image(data_url):
     }
 
 
+def call_llm(message):
+    """Call free Pollinations AI for farming questions."""
+    import urllib.request
+    system_prompt = (
+        "You are KrishiSev, an expert agronomist and plantation advisor for Indian farmers. "
+        "Answer only questions related to farming, agriculture, plantation, crops, soil, irrigation, "
+        "fertilizers, pest control, livestock, government farming schemes, and agricultural markets. "
+        "If the question is not related to agriculture, politely redirect to farming topics. "
+        "Keep answers concise (2-4 sentences), practical, and actionable. "
+        "Use simple language suitable for farmers."
+    )
+    payload = json.dumps({
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": message}
+        ],
+        "model": "openai",
+        "jsonMode": False
+    })
+    req = urllib.request.Request(
+        "https://text.pollinations.ai/",
+        data=payload.encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return resp.read().decode("utf-8").strip()
+    except Exception:
+        return None
+
+
 def chat_reply(message):
     text = message.strip().lower()
     for pattern, reply in CHAT_KNOWLEDGE:
@@ -587,10 +774,14 @@ def chat_reply(message):
             return reply
     if len(text) < 4:
         return "Please enter a crop, soil or disease question and I will guide you."
+    # Try LLM fallback
+    llm_reply = call_llm(message)
+    if llm_reply:
+        return llm_reply
     topic = summarize_chat_topic(text)
     if topic:
         return f'I did not find a direct rule for "{topic}". Share the crop name, visible symptoms, soil pH or moisture and I will narrow it down.'
-    return "I can help with crop recommendation, soil health, irrigation, fertilizer and disease symptoms. For best results, share the crop name, visible symptoms, soil pH, moisture and recent weather."
+    return "I can help with crop recommendation, soil health, irrigation, fertilizer and disease symptoms. Share the crop name, visible symptoms, soil pH, moisture and recent weather."
 
 
 class AgriBotHandler(SimpleHTTPRequestHandler):

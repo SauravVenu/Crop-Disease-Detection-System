@@ -3,20 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KRISHISEV</title>
+  <meta name="description" content="KRISHISEV — AI-powered smart farming assistant for soil analysis, crop recommendation, disease detection, and plantation guidance." />
+  <title>KRISHISEV — Smart Farm Desk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- ═══ LOGIN SCREEN ═══ -->
   <section class="login-screen" id="loginScreen">
     <div class="login-panel">
       <div class="login-brand">
         <span class="brand-mark large">K</span>
         <div>
           <p class="eyebrow">KRISHISEV</p>
-          
         </div>
       </div>
       <form class="login-card" id="loginForm">
@@ -42,6 +47,7 @@
     </div>
   </section>
 
+  <!-- ═══ APP SHELL ═══ -->
   <div class="app-shell">
     <aside class="sidebar">
       <a class="brand" href="#dashboard" aria-label="KRISHISEV home">
@@ -53,28 +59,31 @@
       </a>
 
       <nav class="nav-list" aria-label="Primary">
-        <a class="active" href="#dashboard">
+        <a class="active" href="#dashboard" data-target="view-dashboard">
           <span>⌂</span>
           Dashboard
         </a>
-        <a href="#chatbot">
+        <a href="#chatbot" data-target="view-chatbot">
           <span>✦</span>
           Ask Krishi
         </a>
-        <a href="#crop">
+        <a href="#crop" data-target="view-crop">
           <span>◎</span>
           Crop Match
         </a>
-        <a href="#soil">
+        <a href="#soil" data-target="view-soil">
           <span>◌</span>
           Soil Scan
         </a>
-        <a href="#disease">
+        <a href="#disease" data-target="view-disease">
           <span>◈</span>
           Disease Scan
         </a>
+        <a href="#map" data-target="view-map">
+          <span>◉</span>
+          Map & Shops
+        </a>
       </nav>
-
     </aside>
 
     <main>
@@ -88,71 +97,89 @@
           <span class="api-badge" id="apiBadge">Checking API</span>
           <button class="icon-button" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">☼</button>
           <button class="ghost-button" id="logoutButton">Logout</button>
-          <button class="primary-button" data-scroll="#chatbot">Start diagnosis</button>
         </div>
       </header>
 
-      <section class="hero-panel" id="dashboard">
-        <div class="hero-copy">
-         
-          <h2>One intelligent workspace for soil, crop and plant health decisions.</h2>
-          
-          <div class="hero-actions">
-            <button class="primary-button" data-scroll="#crop">Recommend crop</button>
-            <button class="ghost-button" data-scroll="#disease">Scan leaf image</button>
-          </div>
-        </div>
-      </section>
+      <!-- ═══ ALL VIEWS AS SIBLINGS ═══ -->
 
-      <section class="map-section">
-        <div class="tool-panel map-panel">
+      <!-- ── DASHBOARD VIEW ── -->
+      <div id="view-dashboard" class="app-view">
+        <section class="hero-panel" id="dashboard">
+          <div class="hero-copy">
+            <p class="status-pill">XGBoost crop engine + ResNet disease vision</p>
+            <h2>One intelligent workspace for soil, crop and plant health decisions.</h2>
+            <p>
+              Farmers can ask questions, enter soil values, upload affected crop images and get quick,
+              actionable guidance from a single friendly farming assistant.
+            </p>
+            <div class="hero-actions">
+              <button class="primary-button" data-target="view-crop">Recommend crop</button>
+              <button class="ghost-button" data-target="view-disease">Scan leaf image</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="feature-selection">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Google Maps vegetation layer</p>
-              <h2>Plantation Suitability Map</h2>
-            </div>
-            <span class="status-pill compact">Green hotspots</span>
-          </div>
-          <div class="map-layout">
-            <div class="vegetation-map" id="vegetationMap" aria-label="World vegetation suitability map"></div>
-            <div class="map-sidecard">
-              <p class="map-kicker">What the green means</p>
-              <strong>More plantation, more vegetation</strong>
-              <p class="map-copy">
-                The green overlay highlights regions that are generally more suitable for plantation and dense vegetation.
-                It uses Google Maps with a heat-style overlay for the major global hotspots.
-              </p>
-              <div class="map-legend">
-                <span><i class="legend-swatch dense"></i> Dense plantation</span>
-                <span><i class="legend-swatch suitable"></i> Suitable vegetation</span>
-                <span><i class="legend-swatch light"></i> Lower coverage</span>
-              </div>
-              <p class="map-status" id="vegetationMapStatus">Loading Google Maps...</p>
+              <p class="eyebrow">Select a tool</p>
+              <h2>Our Features</h2>
             </div>
           </div>
-        </div>
-      </section>
+          <div class="feature-grid">
+            <button class="feature-card" data-target="view-chatbot">
+              <span class="icon">✦</span>
+              <h3>Ask Krishi</h3>
+              <p>AI-powered farming chatbot — ask anything about crops, soil & plantation</p>
+            </button>
+            <button class="feature-card" data-target="view-crop">
+              <span class="icon">◎</span>
+              <h3>Crop Match</h3>
+              <p>XGBoost recommendation for your soil</p>
+            </button>
+            <button class="feature-card" data-target="view-soil">
+              <span class="icon">◌</span>
+              <h3>Soil Moisture Scan</h3>
+              <p>Photo based moisture & condition analysis with graphical report</p>
+            </button>
+            <button class="feature-card" data-target="view-disease">
+              <span class="icon">◈</span>
+              <h3>Disease Scan</h3>
+              <p>ResNet image analysis for leaf health with detailed charts</p>
+            </button>
+            <button class="feature-card" data-target="view-map">
+              <span class="icon">◉</span>
+              <h3>Map & Nearby Shops</h3>
+              <p>Find nurseries, fertilizer shops & view plantation hotspots on map</p>
+            </button>
+          </div>
+        </section>
+      </div>
 
-      <section class="workbench">
+      <!-- ── CHATBOT VIEW ── -->
+      <div id="view-chatbot" class="app-view" hidden>
+        <button class="back-to-dashboard" data-target="view-dashboard">← Back to Dashboard</button>
         <div class="tool-panel chat-panel" id="chatbot">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Natural language support</p>
+              <p class="eyebrow">AI plantation advisor</p>
               <h2>Ask KRISHISEV</h2>
             </div>
             <span class="online-dot">Online</span>
           </div>
           <div class="chat-window" id="chatWindow">
-            <div class="message bot">Hello farmer. Tell me your crop issue, soil condition or disease symptom.</div>
-            <div class="message user">My tomato leaves have yellow spots. What should I do?</div>
-            <div class="message bot">Upload a leaf image for disease prediction. Meanwhile, isolate affected leaves, avoid overhead watering and check humidity around the plant.</div>
+            <div class="message bot">Hello farmer. Tell me your crop issue, soil condition or disease symptom. I can answer any question about plantation, farming, fertilizers, government schemes and more.</div>
           </div>
           <form class="chat-form" id="chatForm">
-            <input id="chatInput" type="text" placeholder="Ask about crops, pests, fertilizer or soil..." autocomplete="off" />
+            <input id="chatInput" type="text" placeholder="Ask about crops, pests, fertilizer, plantation, government schemes..." autocomplete="off" />
             <button class="primary-button" type="submit">Send</button>
           </form>
         </div>
+      </div>
 
+      <!-- ── CROP MATCH VIEW ── -->
+      <div id="view-crop" class="app-view" hidden>
+        <button class="back-to-dashboard" data-target="view-dashboard">← Back to Dashboard</button>
         <div class="tool-panel crop-panel" id="crop">
           <div class="panel-heading">
             <div>
@@ -194,10 +221,12 @@
             <p>Enter soil values and run the local recommendation engine.</p>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section class="soil-section" id="soil">
-        <div class="tool-panel soil-panel">
+      <!-- ── SOIL SCAN VIEW ── -->
+      <div id="view-soil" class="app-view" hidden>
+        <button class="back-to-dashboard" data-target="view-dashboard">← Back to Dashboard</button>
+        <div class="tool-panel soil-panel" id="soil">
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Soil image analysis</p>
@@ -245,6 +274,22 @@
                 <dd id="soilAdviceValue">-</dd>
               </div>
             </div>
+
+            <!-- GRAPHICAL REPORT: Soil Charts -->
+            <div class="chart-section">
+              <h4>Graphical Analysis</h4>
+              <div class="chart-grid">
+                <div class="chart-card">
+                  <h5>Moisture Level</h5>
+                  <canvas id="soilMoistureChart"></canvas>
+                </div>
+                <div class="chart-card">
+                  <h5>Soil Properties Radar</h5>
+                  <canvas id="soilRadarChart"></canvas>
+                </div>
+              </div>
+            </div>
+
             <div class="soil-range-graph" id="soilRangeGraph" aria-label="Soil moisture suitability chart">
               <div class="range-track">
                 <div class="range-band" id="soilRangeBand"></div>
@@ -259,11 +304,24 @@
             <h4>Crops That Can Be Planted</h4>
             <div class="crop-list" id="soilCropList"></div>
           </div>
-        </div>
-      </section>
+          
+          <!-- Cloud Soil Scan History -->
+          <div class="scan-history-section" id="soilHistorySection">
+            <div class="history-header">
+              <h4>Soil Scan History (Saved to Cloud)</h4>
+            </div>
+            <div class="history-list" id="soilHistoryList">
+              <p class="history-placeholder">Loading past soil scans...</p>
+            </div>
+          </div>
 
-      <section class="disease-section" id="disease">
-        <div class="tool-panel upload-panel">
+        </div>
+      </div>
+
+      <!-- ── DISEASE SCAN VIEW ── -->
+      <div id="view-disease" class="app-view" hidden>
+        <button class="back-to-dashboard" data-target="view-dashboard">← Back to Dashboard</button>
+        <div class="tool-panel upload-panel" id="disease">
           <div class="panel-heading">
             <div>
               <p class="eyebrow">ResNet image analysis</p>
@@ -271,6 +329,22 @@
             </div>
             <span class="status-pill compact">High precision</span>
           </div>
+
+          <div class="crop-select-row">
+            <label for="diseaseCropSelect">Select Crop Type</label>
+            <select id="diseaseCropSelect">
+              <option value="Tomato">Tomato</option>
+              <option value="Rice">Rice</option>
+              <option value="Maize">Maize</option>
+              <option value="Potato">Potato</option>
+              <option value="Cotton">Cotton</option>
+              <option value="Sugarcane">Sugarcane</option>
+              <option value="Millet">Millet</option>
+              <option value="Groundnut">Groundnut</option>
+              <option value="General Crop">Other / General Crop</option>
+            </select>
+          </div>
+
           <div class="disease-workspace">
             <label class="upload-box" for="leafUpload">
               <input id="leafUpload" type="file" accept="image/*" />
@@ -311,6 +385,22 @@
                 <dd id="reportAction">-</dd>
               </div>
             </dl>
+
+            <!-- GRAPHICAL REPORT: Disease Charts -->
+            <div class="chart-section">
+              <h4>Graphical Analysis</h4>
+              <div class="chart-grid">
+                <div class="chart-card">
+                  <h5>Healthy vs Affected</h5>
+                  <canvas id="diseaseDonutChart"></canvas>
+                </div>
+                <div class="chart-card">
+                  <h5>Severity Breakdown</h5>
+                  <canvas id="diseaseSeverityChart"></canvas>
+                </div>
+              </div>
+            </div>
+
             <div class="impact-chart" id="impactChart">
               <h4>Disease Impact Graph</h4>
               <div class="chart-row">
@@ -335,8 +425,73 @@
               </div>
             </div>
           </div>
+          
+          <!-- Cloud Scan History -->
+          <div class="scan-history-section" id="diseaseHistorySection">
+            <div class="history-header">
+              <h4>Scan History (Saved to Cloud)</h4>
+              <button class="ghost-button small" id="testFirestoreBtn" style="margin:0;">Test Connection</button>
+            </div>
+            <div class="history-list" id="diseaseHistoryList">
+              <p class="history-placeholder">Loading past scan history...</p>
+            </div>
+          </div>
+
         </div>
-      </section>
+      </div>
+
+      <!-- ── MAP & SHOPS VIEW ── -->
+      <div id="view-map" class="app-view" hidden>
+        <button class="back-to-dashboard" data-target="view-dashboard">← Back to Dashboard</button>
+        <section class="map-section">
+          <div class="tool-panel map-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Google Maps vegetation layer</p>
+                <h2>Plantation Map & Nearby Shops</h2>
+              </div>
+              <span class="status-pill compact">Interactive</span>
+            </div>
+
+            <!-- Map Search Controls -->
+            <div class="map-search-controls" id="mapSearchControls">
+              <button class="map-search-btn active" id="mapBtnHotspots" data-search="hotspots">
+                <span>🌿</span> Plantation Hotspots
+              </button>
+              <button class="map-search-btn" id="mapBtnNursery" data-search="nursery">
+                <span>🌱</span> Nearby Nurseries
+              </button>
+              <button class="map-search-btn" id="mapBtnFertilizer" data-search="fertilizer">
+                <span>🧪</span> Fertilizer Shops
+              </button>
+              <button class="map-search-btn" id="mapBtnPlantation" data-search="plantation">
+                <span>🏪</span> Plantation Shops
+              </button>
+            </div>
+
+            <div class="map-layout">
+              <div class="vegetation-map" id="vegetationMap" aria-label="World vegetation suitability map"></div>
+              <div class="map-sidecard">
+                <p class="map-kicker">What the green means</p>
+                <strong>More plantation, more vegetation</strong>
+                <p class="map-copy">
+                  The green overlay highlights regions that are generally more suitable for plantation and dense vegetation.
+                  Click the buttons above to search for nearby nurseries, fertilizer shops, and plantation stores based on your location.
+                </p>
+                <div class="map-legend">
+                  <span><i class="legend-swatch dense"></i> Dense plantation</span>
+                  <span><i class="legend-swatch suitable"></i> Suitable vegetation</span>
+                  <span><i class="legend-swatch light"></i> Lower coverage</span>
+                </div>
+                <div class="map-results-info" id="mapResultsInfo" hidden>
+                  <p class="map-results-count" id="mapResultsCount"></p>
+                </div>
+                <p class="map-status" id="vegetationMapStatus">Loading Google Maps...</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
 
     </main>
   </div>

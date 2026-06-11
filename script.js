@@ -320,16 +320,15 @@ async function deleteSoilScan(docId, email) {
 }
 window.deleteSoilScan = deleteSoilScan;
 
-async function saveUserCredentialsToFirestore(email, password) {
+async function saveUserCredentialsToFirestore(email) {
   if (!firestoreDb) return;
   try {
     const userDoc = await firestoreDb.collection("users").doc(email).get();
     if (!userDoc.exists) {
       await firestoreDb.collection("users").doc(email).set({
-        email: email,
-        password: password,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      });
+  email: email,
+  timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
       console.log("User credentials successfully saved to Firestore 'users' collection.");
     }
   } catch (error) {
@@ -776,7 +775,7 @@ loginForm.addEventListener("submit", (event) => {
   })
     .then((result) => {
       setLoggedIn(result.user);
-      saveUserCredentialsToFirestore(email, password);
+saveUserCredentialsToFirestore(email);
     })
     .catch((error) => {
       loginError.textContent = error.message || "Login failed.";
@@ -793,7 +792,7 @@ registerButton.addEventListener("click", () => {
   })
     .then((result) => {
       setLoggedIn(result.user);
-      saveUserCredentialsToFirestore(email, password);
+      saveUserCredentialsToFirestore(email);
     })
     .catch((error) => {
       loginError.textContent = error.message || "Account creation failed.";

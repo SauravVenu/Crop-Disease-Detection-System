@@ -1,13 +1,12 @@
 # KRISHISEV — Smart Farm Desk
 
-KRISHISEV is a production-ready, AI-powered agricultural assistant web application designed to help farmers with crop recommendations, soil moisture analysis, leaf disease detection, and plantation guidance.
+KRISHISEV is an AI-powered agricultural assistance platform designed to help farmers with crop recommendations, soil moisture analysis, leaf disease detection, and intelligent farming guidance.
 
 ---
 
 ## 🚀 Key Features
 
 * **Expert AI Chatbot (Ask Krishi)**: Powered by the Google Gemini 2.5 Flash API. Provides expert answers strictly on farming, crops, irrigation, soil health, pests, livestock, and Indian government schemes (like PM-KISAN, PMFBY, MSP, and eNAM).
-* **Interactive Plantation Map & Nearby Shops**: Uses the Google Maps JavaScript API to center on the user's location (using browser geolocation) and search Google Places for nearby **nurseries**, **fertilizer shops**, and **plantation/agri-supply stores**.
 * **Heuristic Soil Moisture Analysis**: Estimates soil moisture percentage based on color, darkness, and texture metrics of an uploaded soil image, and lists crop suitability scores.
 * **Leaf Disease Diagnosis**: Evaluates yellowing, dry spots, and blight signs on crop leaves, providing confidence percentages and treatment recommendations.
 * **Persistent Cloud Sync**: Integrated with Firebase Firestore to persist and sync:
@@ -17,6 +16,18 @@ KRISHISEV is a production-ready, AI-powered agricultural assistant web applicati
   - User's last map search category
 * **Security & Session Restoring**: Synchronizes user profiles securely using standard SQLite authentication locally, with metadata synced to Firestore, and clears passwords from memory immediately after submission.
 * **Dark Mode**: Features a premium CSS layout with dynamic glassmorphism and animated typing indicators.
+
+---
+
+## 🏗 Technology Stack
+
+* **Frontend:** HTML5, CSS3, JavaScript
+* **Backend:** Python
+* **Database:** SQLite (Local), Firebase Firestore (Cloud Synchronization)
+* **Cloud Services:** Firebase Firestore
+* **Artificial Intelligence:** Google Gemini 2.5 Flash API
+* **Image Analysis:** Custom computer vision and heuristic analysis algorithms
+* **Version Control:** Git & GitHub
 
 ---
 
@@ -56,13 +67,7 @@ http://127.0.0.1:8000
 - Verify that standard farming questions (e.g. *"how to make compost"*) receive expert advice.
 - Verify that off-topic questions (e.g. *"who won the 2022 world cup"*) are politely refused and redirected.
 
-### 2. Verification of Google Maps
-- Navigate to the **Map & Shops** view.
-- Allow location permissions and confirm the blue pin indicates your location.
-- Verify that clicking "Nearby Nurseries" displays markers with details.
-- Verify that starting the server with a blank/invalid Maps key gracefully falls back to the offline simulated map layout without crashing.
-
-### 3. Verification of Scan Persistence
+### 2. Verification of Scan Persistence
 - Perform a **Soil Scan** and a **Disease Scan**.
 - Verify that the success badge `"✔ Saved to Cloud"` appears on the scan report.
 - Verify that the scan appears inside the history lists, and reloading/logging in again restores the history.
@@ -75,3 +80,59 @@ http://127.0.0.1:8000
 2. **Environment Variables**: Configure system environment variables `GEMINI_API_KEY` and `GOOGLE_MAPS_API_KEY` in your hosting dashboard (e.g., Heroku, AWS, Render).
 3. **CORS Restrictions**: Tighten CORS settings in `server.py` to allow only your production domain name instead of `*`.
 4. **HTTPS Enforcing**: Serve the application over SSL/HTTPS to ensure secure geolocation permission requesting.
+
+---
+
+## 📈 Project Status
+
+**Current Status:** Active Development
+
+Completed Modules:
+
+* AI Chatbot (Ask Krishi)
+* Crop Advisory System
+* Soil Moisture Analysis
+* Leaf Disease Detection
+* User Authentication
+* Cloud-Based History Management
+
+Planned Modules:
+
+* Location-Based Agricultural Services
+* Google Maps & Places Integration
+* Public Cloud Deployment
+
+---
+
+## Future Enhancements
+
+### Location-Based Agricultural Services (Planned)
+
+A future version of KRISHISEV will integrate Google Maps Platform and Places API services to provide farmers with location-aware agricultural assistance.
+
+Planned capabilities include:
+
+- Discovering nearby nurseries, fertilizer suppliers, seed distributors, and agricultural service centers.
+- Interactive map-based visualization of agricultural resources.
+- Region-specific recommendations and agricultural support services.
+- Enhanced location-aware farming assistance.
+
+The application architecture has been designed to support Google Maps integration. This feature will be enabled in a future release through Google Maps Platform configuration and API integration.
+
+---
+
+### Deployment Roadmap
+
+KRISHISEV is currently in the final development and validation phase. Core modules, including AI-powered crop assistance, soil analysis, disease detection, user authentication, and cloud-based history management, have been successfully implemented and tested.
+
+Public deployment of the platform is planned after the completion and validation of the location-based agricultural services module, which includes Google Maps and Places API integration. This phased approach ensures that all major features are fully tested, documented, and production-ready before release.
+
+The planned deployment process includes:
+
+* Completion of Google Maps and location-aware agricultural resource discovery features.
+* End-to-end system testing and performance validation.
+* Production environment configuration and security review.
+* Cloud hosting and deployment setup.
+* Final user acceptance testing and documentation updates.
+
+This approach ensures that KRISHISEV is released as a complete, reliable, and scalable agricultural assistance platform.

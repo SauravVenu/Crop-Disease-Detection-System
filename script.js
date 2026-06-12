@@ -86,7 +86,7 @@ checkApi();
    FIREBASE FIRESTORE INTEGRATION
    ═══════════════════════════════ */
 const firebaseConfig = {
-  apiKey: "AIzaSyAH9mJPopVA_rH83FNO9YGeJZkVLidCnww",
+  apiKey: "FIREBASE_API_KEY_PLACEHOLDER",
   authDomain: "crop-diease-detector.firebaseapp.com",
   projectId: "crop-diease-detector",
   storageBucket: "crop-diease-detector.firebasestorage.app",
@@ -102,12 +102,35 @@ try {
 }
 const firestoreDb = typeof firebase !== 'undefined' ? firebase.firestore() : null;
 
+/**
+ * Compress a base64 image to a small thumbnail (default 120x120px)
+ * to keep Firestore document size well under the 1MB limit.
+ */
+function compressImageToThumbnail(dataUrl, maxSize = 120) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.6));
+    };
+    img.onerror = () => resolve("");
+    img.src = dataUrl;
+  });
+}
+
 async function saveDiseaseScanToFirestore(email, scanResult, base64Image) {
   if (!firestoreDb) return;
   try {
     const cropSelect = document.getElementById("diseaseCropSelect");
     const cropName = cropSelect ? cropSelect.value : "General Crop";
-    
+
+    // Compress image to thumbnail to stay well under Firestore's 1MB limit
+    const thumbnail = base64Image ? await compressImageToThumbnail(base64Image) : "";
+
     const docData = {
       email: email,
       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -119,11 +142,11 @@ async function saveDiseaseScanToFirestore(email, scanResult, base64Image) {
       severityScore: scanResult.impact?.severityScore ?? 0,
       treatment: scanResult.treatment,
       metrics: scanResult.metrics || {},
-      image: base64Image
+      image: thumbnail  // Only a small thumbnail, not the full image
     };
-    
+
     await firestoreDb.collection("detections").add(docData);
-    console.log("Disease scan result successfully saved to Firestore 'detections' collection.");
+    console.log("Disease scan saved to Firestore 'detections' collection.");
     loadDiseaseScanHistory(email);
   } catch (error) {
     console.error("Error saving scan result to Firestore detections:", error);
@@ -211,12 +234,12 @@ async function saveSoilScanToFirestore(email, scanResult, base64Image) {
       userEmail: email,
       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       moisturePercentage: scanResult.moisture,
+      soilCondition: scanResult.category,
       recommendedCrops: scanResult.allCropNames || [],
       suitabilityScores: (scanResult.possibleCrops || []).map(item => ({
         crop: item.crop,
         suitability: item.suitability
-      })),
-      imageAnalysis: scanResult.metrics || {}
+      }))
     };
     
     const docRef = await firestoreDb.collection("soil_scans").add(docData);
@@ -278,8 +301,8 @@ async function loadSoilScanHistory(email) {
       const date = data.timestamp && typeof data.timestamp.toDate === "function" ? data.timestamp.toDate().toLocaleString() : (data.timestamp ? new Date(data.timestamp).toLocaleString() : new Date().toLocaleString());
       const cropsText = Array.isArray(data.recommendedCrops) ? data.recommendedCrops.join(", ") : "";
       
-      let condition = "Soil Analysis";
-      if (data.moisturePercentage !== undefined) {
+      let condition = data.soilCondition || "Soil Analysis";
+      if (!data.soilCondition && data.moisturePercentage !== undefined) {
         const moisture = data.moisturePercentage;
         condition = moisture >= 72 ? "Wet soil" : moisture >= 52 ? "Moderately moist" : moisture >= 34 ? "Low to medium" : "Dry soil";
       }
@@ -326,13 +349,13 @@ async function saveUserCredentialsToFirestore(email) {
     const userDoc = await firestoreDb.collection("users").doc(email).get();
     if (!userDoc.exists) {
       await firestoreDb.collection("users").doc(email).set({
-  email: email,
-  timestamp: firebase.firestore.FieldValue.serverTimestamp()
-});
-      console.log("User credentials successfully saved to Firestore 'users' collection.");
+        email: email,
+        registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      console.log("User metadata saved to Firestore 'users' collection.");
     }
   } catch (error) {
-    console.error("Error saving user credentials to Firestore:", error);
+    console.error("Error saving user metadata to Firestore:", error);
   }
 }
 
@@ -677,8 +700,62 @@ function initVegetationMap() {
     placesService = new window.google.maps.places.PlacesService(mapInstance);
   }
 
-  if (vegetationMapStatus) {
-    vegetationMapStatus.textContent = "Green zones highlight dense plantation and vegetation-friendly regions around the world.";
+  // ── Try to show user's current location ──
+  if (navigator.geolocation) {
+    if (vegetationMapStatus) vegetationMapStatus.textContent = "Detecting your location...";
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const userLat = pos.coords.latitude;
+        const userLng = pos.coords.longitude;
+        mapInstance.setCenter({ lat: userLat, lng: userLng });
+        mapInstance.setZoom(12);
+
+        const userMarker = new window.google.maps.Marker({
+          position: { lat: userLat, lng: userLng },
+          map: mapInstance,
+          title: "Your Location",
+          animation: window.google.maps.Animation.DROP,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            fillColor: "#4285F4",
+            fillOpacity: 1,
+            strokeColor: "#ffffff",
+            strokeWeight: 3,
+            scale: 10
+          },
+          zIndex: 999
+        });
+
+        const userInfo = new window.google.maps.InfoWindow({
+          content: `<div style="font-family:Inter,sans-serif;padding:4px">
+            <strong style="font-size:14px;color:#198754">📍 Your Location</strong>
+            <p style="margin:4px 0 0;color:#555;font-size:12px">Use the buttons above to find<br>nurseries &amp; agri shops near you.</p>
+          </div>`
+        });
+        userMarker.addListener("click", () => userInfo.open(mapInstance, userMarker));
+        userInfo.open(mapInstance, userMarker);
+
+        if (vegetationMapStatus) {
+          vegetationMapStatus.textContent = "Showing your location. Use buttons above to search nearby shops.";
+        }
+      },
+      () => {
+        // Permission denied or unavailable — keep global view
+        if (vegetationMapStatus) {
+          vegetationMapStatus.textContent = "Location access denied. Showing global plantation hotspots. Enable location for nearby shop search.";
+        }
+      },
+      { timeout: 8000 }
+    );
+  } else {
+    if (vegetationMapStatus) {
+      vegetationMapStatus.textContent = "Green zones highlight dense plantation and vegetation-friendly regions around the world.";
+    }
+  }
+
+  const user = getSavedUser();
+  if (user && user.email) {
+    loadMapSearchFromFirestore(user.email);
   }
 }
 
@@ -688,6 +765,14 @@ function loadVegetationMap() {
     renderVegetationFallback("Add a Google Maps API key in window.GOOGLE_MAPS_API_KEY to show the live map.");
     return;
   }
+
+  // Handle Google Maps API key authorization errors gracefully
+  window.gm_authFailure = () => {
+    console.warn("[KrishiSev] Google Maps authentication failed. Falling back to offline mockup view.");
+    renderVegetationFallback("Google Maps authentication failed (billing not enabled or key restricted). Showing simulated offline map preview.");
+    mapInstance = null;
+  };
+
   if (window.google && window.google.maps) {
     initVegetationMap();
     return;
@@ -708,6 +793,53 @@ function loadVegetationMap() {
 
 loadVegetationMap();
 
+// Save the last map search type to Firestore
+function saveMapSearchToFirestore(email, searchType) {
+  if (!firestoreDb || !email || email === "guest") return;
+  firestoreDb.collection("map_searches")
+    .doc(email)
+    .set({
+      lastSearchType: searchType,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    })
+    .then(() => console.log("[KrishiSev] Map search type saved:", searchType))
+    .catch((err) => console.warn("[KrishiSev] Map search save error:", err));
+}
+
+// Load the last map search type from Firestore and trigger the search
+function loadMapSearchFromFirestore(email) {
+  if (!firestoreDb || !mapInstance || !email || email === "guest") return;
+  firestoreDb.collection("map_searches")
+    .doc(email)
+    .get()
+    .then((doc) => {
+      if (doc.exists) {
+        const data = doc.data();
+        const searchType = data.lastSearchType;
+        if (searchType) {
+          console.log("[KrishiSev] Triggering last map search from Firestore:", searchType);
+          document.querySelectorAll(".map-search-btn").forEach((b) => {
+            if (b.dataset.search === searchType) {
+              b.classList.add("active");
+            } else {
+              b.classList.remove("active");
+            }
+          });
+          if (searchType === "hotspots") {
+            showHeatmap();
+          } else if (searchType === "nursery") {
+            searchNearbyPlaces("plant nursery near me");
+          } else if (searchType === "fertilizer") {
+            searchNearbyPlaces("fertilizer shop near me");
+          } else if (searchType === "plantation") {
+            searchNearbyPlaces("plantation shop agricultural supply near me");
+          }
+        }
+      }
+    })
+    .catch((err) => console.warn("[KrishiSev] Map search load error:", err));
+}
+
 // Map search buttons
 document.querySelectorAll(".map-search-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -725,6 +857,11 @@ document.querySelectorAll(".map-search-btn").forEach((btn) => {
     } else if (searchType === "plantation") {
       searchNearbyPlaces("plantation shop agricultural supply near me");
     }
+
+    const user = getSavedUser();
+    if (user && user.email) {
+      saveMapSearchToFirestore(user.email, searchType);
+    }
   });
 });
 
@@ -739,6 +876,7 @@ function setLoggedIn(user) {
   loadConversation(user);
   loadDiseaseScanHistory(user.email);
   loadSoilScanHistory(user.email);
+  loadMapSearchFromFirestore(user.email);
 }
 
 function setLoggedOut() {
@@ -767,15 +905,13 @@ if (savedUser) {
 loginForm.addEventListener("submit", (event) => {
   event.preventDefault();
   loginError.textContent = "";
-  const email = loginEmail.value;
+  const email = loginEmail.value.trim();
   const password = loginPassword.value;
-  apiPost("/api/login", {
-    email: email,
-    password: password
-  })
+  apiPost("/api/login", { email, password })
     .then((result) => {
+      loginPassword.value = ""; // Clear password from DOM immediately (security)
       setLoggedIn(result.user);
-saveUserCredentialsToFirestore(email);
+      saveUserCredentialsToFirestore(email);
     })
     .catch((error) => {
       loginError.textContent = error.message || "Login failed.";
@@ -784,13 +920,11 @@ saveUserCredentialsToFirestore(email);
 
 registerButton.addEventListener("click", () => {
   loginError.textContent = "";
-  const email = loginEmail.value;
+  const email = loginEmail.value.trim();
   const password = loginPassword.value;
-  apiPost("/api/register", {
-    email: email,
-    password: password
-  })
+  apiPost("/api/register", { email, password })
     .then((result) => {
+      loginPassword.value = ""; // Clear password from DOM immediately (security)
       setLoggedIn(result.user);
       saveUserCredentialsToFirestore(email);
     })
@@ -807,44 +941,132 @@ logoutButton.addEventListener("click", () => {
 /* ═══════════════════
    CHATBOT
    ═══════════════════ */
+
+/** Converts Gemini plain-text responses to basic HTML for readability */
+function formatBotText(text) {
+  return text
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^\n]+)/g, "• $1")
+    .replace(/\n{2,}/g, "</p><p>")
+    .replace(/\n/g, "<br>")
+    .replace(/^/, "<p>").replace(/$/, "</p>");
+}
+
+/** Add a message bubble to the chat window */
+function addMessage(text, type) {
+  const message = document.createElement("div");
+  message.className = `message ${type}`;
+  if (type === "bot" || type === "bot loading") {
+    message.innerHTML = formatBotText(text);
+  } else {
+    message.textContent = text;
+  }
+  chatWindow.appendChild(message);
+  chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: "smooth" });
+  return message;
+}
+
+/** Show a typing indicator while waiting for bot reply */
+function showTypingIndicator() {
+  const indicator = document.createElement("div");
+  indicator.className = "message bot typing-indicator";
+  indicator.id = "typingIndicator";
+  indicator.innerHTML = "<span></span><span></span><span></span>";
+  chatWindow.appendChild(indicator);
+  chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: "smooth" });
+  return indicator;
+}
+
+/** Replace the typing indicator with the actual bot reply */
+function replaceLoadingMessage(text) {
+  const indicator = document.getElementById("typingIndicator");
+  if (indicator) {
+    indicator.remove();
+  }
+  addMessage(text, "bot");
+}
+
+/** Save a single chat message to Firestore for persistence */
+function saveChatToFirestore(email, type, text) {
+  if (!firestoreDb || !email || email === "guest") return;
+  firestoreDb.collection("chats")
+    .doc(email)
+    .collection("messages")
+    .add({
+      type: type,
+      text: text,
+      time: firebase.firestore.FieldValue.serverTimestamp()
+    })
+    .catch((err) => console.warn("[KrishiSev] Chat save error:", err));
+}
+
 chatForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const text = chatInput.value.trim();
   if (!text) return;
   const user = getSavedUser() || { email: "guest", name: "Guest" };
   addMessage(text, "user");
+  saveChatToFirestore(user.email, "user", text);
   chatInput.value = "";
-  addMessage("Thinking...", "bot loading");
+  chatInput.disabled = true;
+  showTypingIndicator();
   apiPost("/api/chat", { message: text, email: user.email, name: user.name })
-    .then((data) => replaceLoadingMessage(data.reply))
-    .catch(() => replaceLoadingMessage("Server offline. Please run start_app.bat and open http://127.0.0.1:8000."));
+    .then((data) => {
+      chatInput.disabled = false;
+      chatInput.focus();
+      replaceLoadingMessage(data.reply);
+      saveChatToFirestore(user.email, "bot", data.reply);
+    })
+    .catch(() => {
+      chatInput.disabled = false;
+      const errMsg = "Server offline. Please run start_app.bat and open http://127.0.0.1:8000.";
+      replaceLoadingMessage(errMsg);
+    });
 });
 
-function addMessage(text, type) {
-  const message = document.createElement("div");
-  message.className = `message ${type}`;
-  message.textContent = text;
-  chatWindow.appendChild(message);
-  chatWindow.scrollTop = chatWindow.scrollHeight;
-}
-
-function replaceLoadingMessage(text) {
-  const loading = chatWindow.querySelector(".message.loading");
-  if (loading) {
-    loading.className = "message bot";
-    loading.textContent = text;
-  } else {
-    addMessage(text, "bot");
-  }
-  chatWindow.scrollTop = chatWindow.scrollHeight;
-}
-
+/**
+ * Load conversation history: tries Firestore `chats` collection first
+ * (for cross-device persistence), then falls back to local server history.
+ */
 function loadConversation(user) {
   chatWindow.innerHTML = "";
+
+  const welcome = `Welcome ${user.name || user.email}. Ask about crops, soil, irrigation, fertilizer, plantation, government schemes or leaf disease.`;
+
+  // Try Firestore chat history first
+  if (firestoreDb) {
+    firestoreDb.collection("chats")
+      .doc(user.email)
+      .collection("messages")
+      .orderBy("time", "asc")
+      .limit(80)
+      .get()
+      .then((snapshot) => {
+        if (snapshot.empty) {
+          addMessage(welcome, "bot");
+          return;
+        }
+        snapshot.forEach((doc) => {
+          const d = doc.data();
+          addMessage(d.text || "", d.type || "bot");
+        });
+      })
+      .catch(() => {
+        // Firestore failed — fall back to local server
+        loadLocalConversation(user, welcome);
+      });
+  } else {
+    loadLocalConversation(user, welcome);
+  }
+}
+
+/** Fallback: load chat history from local SQLite via server */
+function loadLocalConversation(user, welcome) {
   apiPost("/api/history", { email: user.email, name: user.name })
     .then((data) => {
       if (!data.history || data.history.length === 0) {
-        addMessage(`Welcome ${user.name || user.email}. Ask about crops, soil, irrigation, fertilizer, plantation, government schemes or leaf disease.`, "bot");
+        addMessage(welcome, "bot");
         return;
       }
       data.history.forEach((item) => addMessage(item.text, item.type));

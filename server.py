@@ -10,12 +10,33 @@ import sqlite3
 import hashlib
 import secrets
 import time
+import os
 
 import numpy as np
 from PIL import Image, ImageStat
 
 
 ROOT = Path(__file__).resolve().parent
+
+def load_env():
+    """Load keys from .env file into os.environ using pure Python standard library."""
+    env_path = ROOT / ".env"
+    if env_path.exists():
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if "=" in line:
+                        key, val = line.split("=", 1)
+                        key = key.strip()
+                        val = val.strip().strip('"').strip("'")
+                        os.environ[key] = val
+        except Exception as e:
+            print(f"[KrishiSev] Error loading .env file: {e}")
+
+load_env()
 HOST = "127.0.0.1"
 PORT = 8000
 CONVERSATION_FILE = ROOT / "conversations.json"
@@ -736,52 +757,102 @@ def analyze_soil_image(data_url):
 
 
 def call_llm(message):
-    """Call free Pollinations AI for farming questions."""
+    """Send a farming question to Gemini 2.0 Flash and return the reply text.
+
+    The system prompt strictly limits answers to agricultural topics.
+    Errors are printed to the server terminal for debugging.
+    Returns None if the API call fails so callers can handle the fallback.
+    """
     import urllib.request
+    import json
+
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+
     system_prompt = (
-        "You are KrishiSev, an expert agronomist and plantation advisor for Indian farmers. "
-        "Answer only questions related to farming, agriculture, plantation, crops, soil, irrigation, "
-        "fertilizers, pest control, livestock, government farming schemes, and agricultural markets. "
-        "If the question is not related to agriculture, politely redirect to farming topics. "
-        "Keep answers concise (2-4 sentences), practical, and actionable. "
-        "Use simple language suitable for farmers."
+        "You are KrishiSev, an expert agronomist and AI farming advisor for Indian farmers. "
+        "You ONLY answer questions related to: farming, agriculture, crops, soil health, "
+        "irrigation, fertilizers, pesticides, plant diseases, livestock, dairy, "
+        "government farming schemes (PM-KISAN, PMFBY, MSP, eNAM, KCC), "
+        "crop market prices, organic farming, plantation, and agricultural practices. "
+        "If a question is NOT related to agriculture or farming, politely decline and redirect "
+        "the user back to farming topics. "
+        "Keep responses concise (2-5 sentences), practical, and written in simple language "
+        "that is easy for a farmer to understand. "
+        "Do not make up facts. If you are unsure, say so and suggest consulting a local agronomist."
     )
-    payload = json.dumps({
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": message}
+
+    data = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": f"{system_prompt}\n\nFarmer's Question: {message}"
+                    }
+                ]
+            }
         ],
-        "model": "openai",
-        "jsonMode": False
-    })
+        "generationConfig": {
+            "temperature": 0.4,
+            "maxOutputTokens": 512
+        }
+    }
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+
     req = urllib.request.Request(
-        "https://text.pollinations.ai/",
-        data=payload.encode("utf-8"),
+        url,
+        data=json.dumps(data).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST"
     )
+
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return resp.read().decode("utf-8").strip()
-    except Exception:
+        with urllib.request.urlopen(req, timeout=25) as response:
+            result = json.loads(response.read().decode("utf-8"))
+            candidates = result.get("candidates", [])
+            if not candidates:
+                print("[KrishiSev] Gemini returned no candidates for message:", message[:80])
+                return None
+            return candidates[0]["content"]["parts"][0]["text"].strip()
+    except Exception as exc:
+        print(f"[KrishiSev] Gemini API error: {exc} | message: {message[:80]}")
         return None
 
 
 def chat_reply(message):
+    """Generate a reply for the chatbot.
+
+    Routes ALL meaningful queries to the Gemini API first.
+    Falls back to the local CHAT_KNOWLEDGE rules only when:
+      - The message is a greeting (very short / hello pattern).
+      - Gemini is unavailable (API error or rate limit).
+    """
     text = message.strip().lower()
-    for pattern, reply in CHAT_KNOWLEDGE:
-        if re.search(pattern, text):
-            return reply
+
+    # Short greeting shortcut — avoid burning API quota on one-word inputs
     if len(text) < 4:
         return "Please enter a crop, soil or disease question and I will guide you."
-    # Try LLM fallback
+
+    # Greeting-only shortcut
+    if re.match(r"^(hello|hi|hey|namaste|thanks|thank you|good morning|good evening)\.?\s*$", text):
+        return "Hello! I am KrishiSev, your AI farming advisor. Ask me anything about crops, soil health, irrigation, fertilizers, plant diseases, or government farming schemes."
+
+    # ── Primary path: Gemini API ──
     llm_reply = call_llm(message)
     if llm_reply:
         return llm_reply
-    topic = summarize_chat_topic(text)
-    if topic:
-        return f'I did not find a direct rule for "{topic}". Share the crop name, visible symptoms, soil pH or moisture and I will narrow it down.'
-    return "I can help with crop recommendation, soil health, irrigation, fertilizer and disease symptoms. Share the crop name, visible symptoms, soil pH, moisture and recent weather."
+
+    # ── Fallback: local CHAT_KNOWLEDGE rules (used only when Gemini is down) ──
+    for pattern, reply in CHAT_KNOWLEDGE:
+        if re.search(pattern, text):
+            return reply + " (Note: AI assistant is temporarily unavailable — this is a cached response.)"
+
+    return (
+        "I'm having trouble connecting to the AI service right now. "
+        "Please try again in a moment. In the meantime, I can help with crop recommendation, "
+        "soil health, irrigation, fertilizers and disease symptoms — just share your crop name, "
+        "soil pH, and visible symptoms."
+    )
 
 
 class AgriBotHandler(SimpleHTTPRequestHandler):
@@ -804,8 +875,39 @@ class AgriBotHandler(SimpleHTTPRequestHandler):
         if path == "/api/health":
             json_response(self, {"ok": True, "service": "KRISHISEV", "time": int(time.time())})
             return
-        if path == "/":
-            self.path = "/index.html"
+        if path in ("/", "/index.html"):
+            index_path = ROOT / "index.html"
+            try:
+                content = index_path.read_text(encoding="utf-8")
+                maps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+                content = content.replace(
+                    'window.GOOGLE_MAPS_API_KEY = window.GOOGLE_MAPS_API_KEY || "";',
+                    f'window.GOOGLE_MAPS_API_KEY = window.GOOGLE_MAPS_API_KEY || "{maps_key}";'
+                )
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(content.encode("utf-8"))
+                return
+            except Exception as e:
+                self.send_error(500, f"Error serving index.html: {e}")
+                return
+        if path == "/script.js":
+            script_path = ROOT / "script.js"
+            try:
+                content = script_path.read_text(encoding="utf-8")
+                firebase_key = os.environ.get("FIREBASE_API_KEY", "")
+                content = content.replace("FIREBASE_API_KEY_PLACEHOLDER", firebase_key)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/javascript; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(content.encode("utf-8"))
+                return
+            except Exception as e:
+                self.send_error(500, f"Error serving script.js: {e}")
+                return
         return super().do_GET()
 
     def do_POST(self):

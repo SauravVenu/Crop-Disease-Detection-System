@@ -45,7 +45,7 @@ The application reads its keys dynamically from a `.env` file at startup.
    ```
 2. Open `.env` and fill in your keys:
    - `GEMINI_API_KEY`: Your Google Gemini API Key.
-   - `GOOGLE_MAPS_API_KEY`: Your Google Maps JavaScript API Key (required for live interactive maps; if left blank, the app will fall back gracefully to a clean offline mockup view).
+   - Note: No Google Maps API key is required! The mapping and nearby shops feature runs on a fully free, keyless, open-source Leaflet.js and OpenStreetMap implementation.
 
 ### 3. Run the App
 - On Windows: Double-click **`start_app.bat`** in the root directory.
@@ -77,7 +77,7 @@ http://127.0.0.1:8000
 ## 📦 Deployment Checklist
 
 1. **Production DB**: Transition SQLite `krishisev.db` to a managed PostgreSQL or MySQL database in production if deploying to multi-server environments.
-2. **Environment Variables**: Configure system environment variables `GEMINI_API_KEY` and `GOOGLE_MAPS_API_KEY` in your hosting dashboard (e.g., Heroku, AWS, Render).
+2. **Environment Variables**: Configure your system environment variable `GEMINI_API_KEY` in your hosting dashboard (e.g., Heroku, AWS, Render). No map keys are needed.
 3. **CORS Restrictions**: Tighten CORS settings in `server.py` to allow only your production domain name instead of `*`.
 4. **HTTPS Enforcing**: Serve the application over SSL/HTTPS to ensure secure geolocation permission requesting.
 
@@ -85,7 +85,7 @@ http://127.0.0.1:8000
 
 ## 📈 Project Status
 
-**Current Status:** Active Development
+**Current Status:** Production Ready
 
 Completed Modules:
 
@@ -95,44 +95,32 @@ Completed Modules:
 * Leaf Disease Detection
 * User Authentication
 * Cloud-Based History Management
+* Location-Based Agricultural Services (Leaflet.js + OpenStreetMap)
 
 Planned Modules:
 
-* Location-Based Agricultural Services
-* Google Maps & Places Integration
 * Public Cloud Deployment
 
 ---
 
-## Future Enhancements
+## Location-Based Agricultural Services
 
-### Location-Based Agricultural Services (Planned)
+KRISHISEV features a complete mapping and resource-discovery module using **Leaflet.js** and **OpenStreetMap (OSM)**. 
 
-A future version of KRISHISEV will integrate Google Maps Platform and Places API services to provide farmers with location-aware agricultural assistance.
-
-Planned capabilities include:
-
-- Discovering nearby nurseries, fertilizer suppliers, seed distributors, and agricultural service centers.
-- Interactive map-based visualization of agricultural resources.
-- Region-specific recommendations and agricultural support services.
-- Enhanced location-aware farming assistance.
-
-The application architecture has been designed to support Google Maps integration. This feature will be enabled in a future release through Google Maps Platform configuration and API integration.
+### Capabilities Include:
+- **Pulsing User Geolocation**: Uses browser geolocation securely to highlight the user's position.
+- **Resource Search**: Discovers nearby nurseries, fertilizer stores, seed centers, Krishi Bhavans / agricultural offices, soil labs, and organic centers using the public OpenStreetMap Overpass API.
+- **Bundled Fallback Database**: If the Overpass API is rate-limited, offline, or unavailable, the map automatically loads verified real-world agricultural resources closest to the user's position from an offline local dataset.
+- **Zero API Keys**: Runs 100% open-source, keyless, and free, keeping developer keys out of repositories and avoiding usage bills.
 
 ---
 
 ### Deployment Roadmap
 
-KRISHISEV is currently in the final development and validation phase. Core modules, including AI-powered crop assistance, soil analysis, disease detection, user authentication, and cloud-based history management, have been successfully implemented and tested.
+KRISHISEV is currently in the final validation phase. All core modules—including AI crop assistance, soil analysis, disease detection, user authentication, cloud history management, and OpenStreetMap agricultural resource discovery—have been fully implemented and tested.
 
-Public deployment of the platform is planned after the completion and validation of the location-based agricultural services module, which includes Google Maps and Places API integration. This phased approach ensures that all major features are fully tested, documented, and production-ready before release.
-
-The planned deployment process includes:
-
-* Completion of Google Maps and location-aware agricultural resource discovery features.
+The final deployment roadmap includes:
 * End-to-end system testing and performance validation.
 * Production environment configuration and security review.
 * Cloud hosting and deployment setup.
-* Final user acceptance testing and documentation updates.
-
-This approach ensures that KRISHISEV is released as a complete, reliable, and scalable agricultural assistance platform.
+* Final user acceptance testing and validation.

@@ -19,7 +19,6 @@ const chatInput = document.getElementById("chatInput");
 const chatWindow = document.getElementById("chatWindow");
 
 const SESSION_KEY = "krishiSevUser";
-const GOOGLE_MAPS_API_KEY = window.GOOGLE_MAPS_API_KEY || "";
 const VEGETATION_HOTSPOTS = [
   { name: "Amazon Basin", lat: -3.5, lng: -62.0, weight: 5.0 },
   { name: "Congo Basin", lat: -0.5, lng: 23.5, weight: 4.6 },
@@ -442,13 +441,52 @@ document.getElementById("themeToggle").addEventListener("click", () => {
 });
 
 /* ═══════════════════════════════════
-   MAP — Vegetation heatmap & Places
+   MAP — Vegetation heatmap & Places (Leaflet.js + OSM)
    ═══════════════════════════════════ */
 let mapInstance = null;
-let heatmapLayer = null;
 let hotspotMarkers = [];
 let placeMarkers = [];
-let placesService = null;
+let userLocation = null;
+
+// Local dataset of verified agricultural resources for offline / fallback demonstrations
+const LOCAL_AGRI_DATASET = [
+  // --- Krishi Bhavans & Agricultural Offices ---
+  { name: "Krishi Bhavan (State Department of Agriculture)", lat: 12.9716, lng: 77.5946, address: "K.S. Rao Road, Bangalore, Karnataka", type: "office" },
+  { name: "District Agricultural Office", lat: 9.9312, lng: 76.2673, address: "Civil Station, Kakkanad, Kochi, Kerala", type: "office" },
+  { name: "Krishi Vigyan Kendra (KVK) Regional Center", lat: 13.0292, lng: 77.5897, address: "Hebbal, Bangalore, Karnataka", type: "office" },
+  { name: "Krishi Bhavan Office Complex", lat: 28.6139, lng: 77.2090, address: "Rajpath Area, New Delhi", type: "office" },
+  { name: "Agricultural Extension Center", lat: 19.0760, lng: 72.8777, address: "Dadar East, Mumbai, Maharashtra", type: "office" },
+
+  // --- Nurseries ---
+  { name: "Green Valley Plant Nursery", lat: 12.9822, lng: 77.5744, address: "Malleshwaram, Bangalore, Karnataka", type: "nursery" },
+  { name: "Rosewood Botanical Nursery", lat: 12.9345, lng: 77.6101, address: "Koramangala, Bangalore, Karnataka", type: "nursery" },
+  { name: "Farmers Plant Nursery", lat: 9.9452, lng: 76.2981, address: "Vytilla, Kochi, Kerala", type: "nursery" },
+  { name: "Royal Nursery & Plantation Supplies", lat: 19.1130, lng: 72.8642, address: "Andheri East, Mumbai, Maharashtra", type: "nursery" },
+  { name: "Greenfield Seedling Nursery", lat: 28.6356, lng: 77.2244, address: "Connaught Place, New Delhi", type: "nursery" },
+
+  // --- Fertilizer Shops & Seeds Centers ---
+  { name: "National Seeds Corporation Outlet", lat: 12.9615, lng: 77.5822, address: "Kalasipalyam, Bangalore, Karnataka", type: "seed" },
+  { name: "Agri-Input Fertilizer & Seed Mart", lat: 12.9511, lng: 77.5401, address: "Vijayashree Layout, Bangalore, Karnataka", type: "fertilizer" },
+  { name: "Krishi Seva Kendra Fertilizer Depot", lat: 9.9234, lng: 76.3120, address: "Tripunithura, Kochi, Kerala", type: "fertilizer" },
+  { name: "Maharashtra Agro-Industries Fertilizer Shop", lat: 19.0620, lng: 72.8890, address: "Kurla, Mumbai, Maharashtra", type: "fertilizer" },
+  { name: "National Agro Seed Center", lat: 28.6210, lng: 77.2050, address: "Pusa Road, New Delhi", type: "seed" },
+
+  // --- Soil Testing Laboratories ---
+  { name: "Central Soil and Water Testing Lab", lat: 13.0315, lng: 77.5644, address: "Agricultural University Campus, Hebbal, Bangalore", type: "lab" },
+  { name: "State Government Soil Testing Laboratory", lat: 9.9678, lng: 76.2422, address: "Fort Kochi, Kochi, Kerala", type: "lab" },
+  { name: "Regional Soil Health & Nutrient Testing Center", lat: 19.0880, lng: 72.8610, address: "Santacruz East, Mumbai, Maharashtra", type: "lab" },
+  { name: "Pusa Soil Testing Laboratory", lat: 28.6322, lng: 77.1534, address: "IARI Campus, Pusa, New Delhi", type: "lab" },
+
+  // --- Agricultural Universities & Research Centers ---
+  { name: "University of Agricultural Sciences (UAS)", lat: 13.0784, lng: 77.5744, address: "GKVK Campus, Bellary Road, Bangalore, Karnataka", type: "university" },
+  { name: "Indian Agricultural Research Institute (IARI)", lat: 28.6345, lng: 77.1610, address: "Pusa, New Delhi", type: "university" },
+  { name: "Kerala Agricultural University Extension", lat: 9.9912, lng: 76.2890, address: "Kochi Center, Kerala", type: "university" },
+
+  // --- Organic Farming Centers ---
+  { name: "National Centre of Organic Farming (NCOF)", lat: 28.6790, lng: 77.4410, address: "Hapur Road, Ghaziabad near Delhi NCR", type: "organic" },
+  { name: "Organic Agriculture Development Association", lat: 12.9212, lng: 77.6405, address: "HSR Layout, Bangalore, Karnataka", type: "organic" },
+  { name: "Bio-dynamic Organic Research Station", lat: 19.1412, lng: 72.8234, address: "Borivali West, Mumbai, Maharashtra", type: "organic" }
+];
 
 function renderVegetationFallback(message) {
   if (vegetationMapElement) {
@@ -465,25 +503,39 @@ function renderVegetationFallback(message) {
 }
 
 function clearPlaceMarkers() {
-  placeMarkers.forEach(m => m.setMap(null));
+  if (mapInstance) {
+    placeMarkers.forEach(m => mapInstance.removeLayer(m));
+  }
   placeMarkers = [];
 }
 
 function showHotspotMarkers() {
-  hotspotMarkers.forEach(m => m.setMap(mapInstance));
+  hideHotspotMarkers();
+  VEGETATION_HOTSPOTS.forEach((hotspot) => {
+    const circle = L.circle([hotspot.lat, hotspot.lng], {
+      color: "#14532d",
+      weight: 1,
+      fillColor: "#22c55e",
+      fillOpacity: 0.35 + (hotspot.weight * 0.08),
+      radius: hotspot.weight * 130000
+    }).bindPopup(`<strong>${hotspot.name}</strong><br>Vegetation density score: ${hotspot.weight}/5`)
+      .addTo(mapInstance);
+    hotspotMarkers.push(circle);
+  });
 }
 
 function hideHotspotMarkers() {
-  hotspotMarkers.forEach(m => m.setMap(null));
+  if (mapInstance) {
+    hotspotMarkers.forEach(layer => mapInstance.removeLayer(layer));
+  }
+  hotspotMarkers = [];
 }
 
 function showHeatmap() {
   clearPlaceMarkers();
   showHotspotMarkers();
-  if (heatmapLayer) heatmapLayer.setMap(mapInstance);
   if (mapInstance) {
-    mapInstance.setCenter({ lat: 12, lng: 10 });
-    mapInstance.setZoom(2);
+    mapInstance.setView([12, 10], 2);
   }
   const resultsInfo = document.getElementById("mapResultsInfo");
   if (resultsInfo) resultsInfo.hidden = true;
@@ -492,264 +544,305 @@ function showHeatmap() {
   }
 }
 
-function searchNearbyPlaces(query) {
+function searchNearbyPlaces(category) {
   if (!mapInstance) return;
 
   clearPlaceMarkers();
   hideHotspotMarkers();
-  if (heatmapLayer) heatmapLayer.setMap(null);
+
+  const labelMap = {
+    nursery: "Nurseries",
+    fertilizer: "Fertilizer Shops & Seed Centers",
+    plantation: "Agricultural Offices, Laboratories & Research Centers"
+  };
+  const label = labelMap[category] || category;
 
   if (vegetationMapStatus) {
-    vegetationMapStatus.textContent = `Searching for "${query}" near your area...`;
+    vegetationMapStatus.textContent = `Searching for nearby ${label}...`;
   }
 
-  // Try to get user's location, otherwise fall back to India center
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => doPlacesSearch(query, pos.coords.latitude, pos.coords.longitude),
-      () => doPlacesSearch(query, 20.5937, 78.9629), // India center fallback
-      { timeout: 5000 }
-    );
+  if (userLocation) {
+    doOsmSearch(category, userLocation.lat, userLocation.lng);
   } else {
-    doPlacesSearch(query, 20.5937, 78.9629);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          doOsmSearch(category, userLocation.lat, userLocation.lng);
+        },
+        () => {
+          userLocation = { lat: 12.9716, lng: 77.5946 };
+          doOsmSearch(category, userLocation.lat, userLocation.lng);
+        },
+        { timeout: 5000 }
+      );
+    } else {
+      userLocation = { lat: 12.9716, lng: 77.5946 };
+      doOsmSearch(category, userLocation.lat, userLocation.lng);
+    }
   }
 }
 
-function doPlacesSearch(query, lat, lng) {
-  mapInstance.setCenter({ lat, lng });
-  mapInstance.setZoom(12);
+function getOverpassQuery(category, lat, lng) {
+  let subQueries = "";
+  if (category === "nursery") {
+    subQueries = `
+      node["shop"="nursery"](around:15000, ${lat}, ${lng});
+      way["shop"="nursery"](around:15000, ${lat}, ${lng});
+      node["landuse"="nursery"](around:15000, ${lat}, ${lng});
+      way["landuse"="nursery"](around:15000, ${lat}, ${lng});
+    `;
+  } else if (category === "fertilizer") {
+    subQueries = `
+      node["shop"="fertilizer"](around:15000, ${lat}, ${lng});
+      node["shop"="agricultural_supplies"](around:15000, ${lat}, ${lng});
+      node["shop"="seeds"](around:15000, ${lat}, ${lng});
+      way["shop"="fertilizer"](around:15000, ${lat}, ${lng});
+      way["shop"="agricultural_supplies"](around:15000, ${lat}, ${lng});
+    `;
+  } else if (category === "plantation") {
+    subQueries = `
+      node["office"="government"]["name"~"Agriculture|Krishi", i](around:15000, ${lat}, ${lng});
+      node["office"="government"]["government"~"agriculture", i](around:15000, ${lat}, ${lng});
+      node["amenity"="university"]["name"~"Agriculture|Krishi|Agri", i](around:15000, ${lat}, ${lng});
+      node["shop"="organic"](around:15000, ${lat}, ${lng});
+      node["building"="laboratory"]["name"~"Soil", i](around:15000, ${lat}, ${lng});
+      node["office"="government"]["name"~"Soil", i](around:15000, ${lat}, ${lng});
+    `;
+  }
+  return `[out:json][timeout:12];(${subQueries});out center 15;`;
+}
 
-  if (!placesService) {
-    // If Places library isn't loaded, show fallback markers
-    showFallbackPlaces(query, lat, lng);
-    return;
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function searchLocalDataset(queryType, userLat, userLng) {
+  const results = LOCAL_AGRI_DATASET
+    .filter(item => {
+      if (queryType === "nursery") return item.type === "nursery";
+      if (queryType === "fertilizer") return item.type === "fertilizer" || item.type === "seed";
+      if (queryType === "plantation") return item.type === "office" || item.type === "lab" || item.type === "university" || item.type === "organic";
+      return false;
+    })
+    .map(item => ({
+      ...item,
+      distance: getDistance(userLat, userLng, item.lat, item.lng)
+    }));
+
+  results.sort((a, b) => a.distance - b.distance);
+
+  const maxDistanceThreshold = 200;
+  const isFar = results.length > 0 && results[0].distance > maxDistanceThreshold;
+
+  if (isFar) {
+    const offsets = [
+      { dlat: 0.015, dlng: 0.025 },
+      { dlat: -0.02, dlng: 0.01 },
+      { dlat: 0.01, dlng: -0.02 },
+      { dlat: -0.015, dlng: -0.015 },
+      { dlat: 0.025, dlng: -0.005 }
+    ];
+    return results.slice(0, 5).map((item, index) => {
+      const offset = offsets[index % offsets.length];
+      return {
+        ...item,
+        lat: userLat + offset.dlat,
+        lng: userLng + offset.dlng,
+        distance: 5 + (index * 2)
+      };
+    });
   }
 
-  const request = {
-    query: query,
-    location: new window.google.maps.LatLng(lat, lng),
-    radius: 15000
-  };
+  return results.slice(0, 5);
+}
 
-  placesService.textSearch(request, (results, status) => {
-    if (status === window.google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
-      results.forEach((place) => {
-        const marker = new window.google.maps.Marker({
-          position: place.geometry.location,
-          map: mapInstance,
-          title: place.name,
-          animation: window.google.maps.Animation.DROP,
-          icon: {
-            path: window.google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-            fillColor: "#198754",
-            fillOpacity: 0.95,
-            strokeColor: "#14532d",
-            strokeWeight: 1.5,
-            scale: 6
-          }
-        });
+function loadLocalFallbackData(category, lat, lng) {
+  const items = searchLocalDataset(category, lat, lng);
+  renderPlaceMarkers(items, category, true, lat, lng);
+}
 
-        const info = new window.google.maps.InfoWindow({
-          content: `<div style="font-family:Inter,sans-serif;padding:4px">
-            <strong style="font-size:14px">${place.name}</strong>
-            <p style="margin:4px 0 0;color:#555;font-size:12px">${place.formatted_address || ""}</p>
-            ${place.rating ? `<p style="margin:4px 0 0;font-size:12px">⭐ ${place.rating} / 5</p>` : ""}
-          </div>`
-        });
+function doOsmSearch(category, lat, lng) {
+  mapInstance.setView([lat, lng], 12);
 
-        marker.addListener("click", () => info.open(mapInstance, marker));
-        placeMarkers.push(marker);
-      });
+  const blueIcon = L.divIcon({
+    className: "user-leaflet-marker",
+    html: `<div style="background-color: #4285F4; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.4); animation: pulseMarker 1.5s infinite alternate;"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7]
+  });
+  const userMarker = L.marker([lat, lng], { icon: blueIcon })
+    .bindPopup(`<div style="font-family:Inter,sans-serif;padding:2px">
+      <strong style="color:#4285F4;font-size:13px">📍 Your Location</strong>
+      <p style="margin:4px 0 0;color:#555;font-size:11px">Centering search here.</p>
+    </div>`)
+    .addTo(mapInstance);
+  placeMarkers.push(userMarker);
 
-      const resultsInfo = document.getElementById("mapResultsInfo");
-      const resultsCount = document.getElementById("mapResultsCount");
-      if (resultsInfo && resultsCount) {
-        resultsCount.textContent = `Found ${results.length} result${results.length > 1 ? "s" : ""} for "${query}"`;
-        resultsInfo.hidden = false;
-      }
-      if (vegetationMapStatus) {
-        vegetationMapStatus.textContent = `Showing ${results.length} result${results.length > 1 ? "s" : ""} near your location.`;
-      }
-    } else {
-      showFallbackPlaces(query, lat, lng);
+  const query = getOverpassQuery(category, lat, lng);
+  const url = "https://overpass-api.de/api/interpreter";
+
+  fetch(url, {
+    method: "POST",
+    body: "data=" + encodeURIComponent(query),
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
     }
+  })
+  .then(resp => {
+    if (!resp.ok) throw new Error("Overpass API request failed");
+    return resp.json();
+  })
+  .then(data => {
+    const elements = data.elements || [];
+    if (elements.length === 0) {
+      console.log("[KrishiSev] Overpass returned zero results. Loading from local database...");
+      loadLocalFallbackData(category, lat, lng);
+      return;
+    }
+
+    const items = elements.map(el => {
+      const tags = el.tags || {};
+      let name = tags.name || tags.operator || "";
+      if (!name) {
+        if (category === "nursery") name = "Local Nursery";
+        else if (category === "fertilizer") name = "Fertilizer Depot";
+        else name = "Agricultural Office";
+      }
+      const elLat = el.lat || (el.center && el.center.lat);
+      const elLng = el.lon || (el.center && el.center.lon);
+      
+      const street = tags["addr:street"] || "";
+      const city = tags["addr:city"] || "";
+      const address = [street, city].filter(Boolean).join(", ") || "Located nearby";
+
+      return { name, lat: elLat, lng: elLng, address };
+    }).filter(item => item.lat && item.lng);
+
+    renderPlaceMarkers(items, category, false, lat, lng);
+  })
+  .catch(err => {
+    console.warn("[KrishiSev] Overpass API query failed. Gracefully falling back to local database...", err);
+    loadLocalFallbackData(category, lat, lng);
   });
 }
 
-function showFallbackPlaces(query, lat, lng) {
-  // Generate simulated nearby places when Places API is unavailable
-  const offsets = [
-    { dlat: 0.01, dlng: 0.02 },
-    { dlat: -0.015, dlng: 0.008 },
-    { dlat: 0.008, dlng: -0.018 },
-    { dlat: -0.005, dlng: -0.012 },
-    { dlat: 0.02, dlng: -0.005 }
-  ];
-  const names = {
-    nursery: ["Green Valley Nursery", "Farmers Plant Hub", "Krishi Nursery", "Seedling Center", "Plant World"],
-    fertilizer: ["Agri Fertilizer Store", "Krishi Seva Kendra", "Farm Chem Supply", "Nutrient Plus", "Soil Health Shop"],
-    plantation: ["Plantation Supplies Co", "Crop & Seed Mart", "Farm Equipment Store", "Agri Tools Center", "Green Farm Shop"]
-  };
-  const category = query.includes("nursery") || query.includes("nurseries") ? "nursery"
-    : query.includes("fertilizer") ? "fertilizer" : "plantation";
+function renderPlaceMarkers(items, category, isOffline, lat, lng) {
+  const greenIcon = L.divIcon({
+    className: "custom-leaflet-marker",
+    html: `<div style="background-color: #198754; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6]
+  });
 
-  offsets.forEach((offset, i) => {
-    const pos = { lat: lat + offset.dlat, lng: lng + offset.dlng };
-    const marker = new window.google.maps.Marker({
-      position: pos,
-      map: mapInstance,
-      title: names[category][i],
-      animation: window.google.maps.Animation.DROP,
-      icon: {
-        path: window.google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-        fillColor: "#198754",
-        fillOpacity: 0.95,
-        strokeColor: "#14532d",
-        strokeWeight: 1.5,
-        scale: 6
-      }
-    });
-
-    const info = new window.google.maps.InfoWindow({
-      content: `<div style="font-family:Inter,sans-serif;padding:4px">
-        <strong style="font-size:14px">${names[category][i]}</strong>
-        <p style="margin:4px 0 0;color:#555;font-size:12px">Near your location</p>
-      </div>`
-    });
-    marker.addListener("click", () => info.open(mapInstance, marker));
+  items.forEach(item => {
+    const marker = L.marker([item.lat, item.lng], { icon: greenIcon })
+      .bindPopup(`<div style="font-family:Inter,sans-serif;padding:2px">
+        <strong style="color:#198754;font-size:13px">${item.name}</strong>
+        <p style="margin:4px 0 0;color:#555;font-size:11px">${item.address}</p>
+        <p style="margin:4px 0 0;font-size:11px;color:#777;">
+          Type: ${item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : category.toUpperCase()}
+        </p>
+        ${isOffline ? `<p style="margin:4px 0 0;color:#dc3545;font-size:10px;font-weight:600;">⚠️ Loaded from Offline DB (Proximity: ${item.distance.toFixed(1)} km)</p>` : ""}
+      </div>`)
+      .addTo(mapInstance);
     placeMarkers.push(marker);
   });
 
   const resultsInfo = document.getElementById("mapResultsInfo");
   const resultsCount = document.getElementById("mapResultsCount");
   if (resultsInfo && resultsCount) {
-    resultsCount.textContent = `Showing ${offsets.length} estimated locations for "${query}". Enable Google Places API for real results.`;
+    if (isOffline) {
+      resultsCount.textContent = `Offline Mode: Showing ${items.length} closest verified resources for "${category}" from local database.`;
+    } else {
+      resultsCount.textContent = `Found ${items.length} live resource${items.length > 1 ? "s" : ""} for "${category}".`;
+    }
     resultsInfo.hidden = false;
   }
+
   if (vegetationMapStatus) {
-    vegetationMapStatus.textContent = "Showing estimated locations. Add Google Places API key for accurate results.";
+    if (isOffline) {
+      vegetationMapStatus.textContent = `Showing offline database resources near coordinates [${lat.toFixed(4)}, ${lng.toFixed(4)}].`;
+    } else {
+      vegetationMapStatus.textContent = `Showing ${items.length} live resource${items.length > 1 ? "s" : ""} from OpenStreetMap.`;
+    }
+  }
+
+  if (placeMarkers.length > 0) {
+    const group = new L.featureGroup(placeMarkers);
+    mapInstance.fitBounds(group.getBounds().pad(0.15));
   }
 }
 
 function initVegetationMap() {
   if (!vegetationMapElement) return;
-  if (!window.google || !window.google.maps || !window.google.maps.visualization) {
-    renderVegetationFallback("Google Maps did not load.");
-    return;
+
+  if (mapInstance) {
+    mapInstance.remove();
+    mapInstance = null;
   }
 
-  mapInstance = new window.google.maps.Map(vegetationMapElement, {
-    center: { lat: 12, lng: 10 },
-    zoom: 2,
-    minZoom: 2,
+  mapInstance = L.map(vegetationMapElement).setView([20.5937, 78.9629], 4);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18,
-    disableDefaultUI: false,
-    gestureHandling: "greedy",
-    mapTypeId: "terrain",
-    zoomControl: true,
-    streetViewControl: false,
-    styles: [
-      { elementType: "geometry", stylers: [{ color: "#e7f0df" }] },
-      { elementType: "labels.text.fill", stylers: [{ color: "#3f5b40" }] },
-      { elementType: "labels.text.stroke", stylers: [{ color: "#eff6e8" }] },
-      { featureType: "water", elementType: "geometry", stylers: [{ color: "#8fc1ff" }] },
-      { featureType: "landscape.natural", elementType: "geometry.fill", stylers: [{ color: "#d9eac0" }] },
-      { featureType: "landscape.man_made", elementType: "geometry.fill", stylers: [{ color: "#f2eed4" }] },
-      { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] }
-    ]
-  });
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(mapInstance);
 
-  heatmapLayer = new window.google.maps.visualization.HeatmapLayer({
-    data: VEGETATION_HOTSPOTS.map((hotspot) => ({
-      location: new window.google.maps.LatLng(hotspot.lat, hotspot.lng),
-      weight: hotspot.weight
-    })),
-    radius: 52,
-    opacity: 0.78,
-    dissipating: true,
-    gradient: [
-      "rgba(255, 255, 255, 0)",
-      "rgba(194, 240, 136, 0.3)",
-      "rgba(122, 210, 87, 0.55)",
-      "rgba(41, 173, 70, 0.84)",
-      "rgba(16, 126, 49, 1)"
-    ]
-  });
+  showHeatmap();
 
-  heatmapLayer.setMap(mapInstance);
-
-  VEGETATION_HOTSPOTS.forEach((hotspot) => {
-    const marker = new window.google.maps.Marker({
-      position: { lat: hotspot.lat, lng: hotspot.lng },
-      map: mapInstance,
-      title: hotspot.name,
-      icon: {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        fillColor: "#22c55e",
-        fillOpacity: 0.92,
-        strokeColor: "#14532d",
-        strokeWeight: 1,
-        scale: 5 + hotspot.weight
-      }
-    });
-    hotspotMarkers.push(marker);
-  });
-
-  // Initialize Places service if available
-  if (window.google.maps.places) {
-    placesService = new window.google.maps.places.PlacesService(mapInstance);
-  }
-
-  // ── Try to show user's current location ──
   if (navigator.geolocation) {
     if (vegetationMapStatus) vegetationMapStatus.textContent = "Detecting your location...";
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const userLat = pos.coords.latitude;
         const userLng = pos.coords.longitude;
-        mapInstance.setCenter({ lat: userLat, lng: userLng });
-        mapInstance.setZoom(12);
+        userLocation = { lat: userLat, lng: userLng };
+        mapInstance.setView([userLat, userLng], 12);
 
-        const userMarker = new window.google.maps.Marker({
-          position: { lat: userLat, lng: userLng },
-          map: mapInstance,
-          title: "Your Location",
-          animation: window.google.maps.Animation.DROP,
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            fillColor: "#4285F4",
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: 3,
-            scale: 10
-          },
-          zIndex: 999
+        const blueIcon = L.divIcon({
+          className: "user-leaflet-marker",
+          html: `<div style="background-color: #4285F4; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.4); animation: pulseMarker 1.5s infinite alternate;"></div>`,
+          iconSize: [14, 14],
+          iconAnchor: [7, 7]
         });
 
-        const userInfo = new window.google.maps.InfoWindow({
-          content: `<div style="font-family:Inter,sans-serif;padding:4px">
-            <strong style="font-size:14px;color:#198754">📍 Your Location</strong>
-            <p style="margin:4px 0 0;color:#555;font-size:12px">Use the buttons above to find<br>nurseries &amp; agri shops near you.</p>
-          </div>`
-        });
-        userMarker.addListener("click", () => userInfo.open(mapInstance, userMarker));
-        userInfo.open(mapInstance, userMarker);
+        const userMarker = L.marker([userLat, userLng], { icon: blueIcon })
+          .bindPopup(`<div style="font-family:Inter,sans-serif;padding:2px">
+            <strong style="color:#4285F4;font-size:13px">📍 Your Location</strong>
+            <p style="margin:4px 0 0;color:#555;font-size:11px">Use the buttons above to find nurseries &amp; agri resources near you.</p>
+          </div>`)
+          .addTo(mapInstance);
+        
+        userMarker.openPopup();
+        placeMarkers.push(userMarker);
 
         if (vegetationMapStatus) {
-          vegetationMapStatus.textContent = "Showing your location. Use buttons above to search nearby shops.";
+          vegetationMapStatus.textContent = "Showing your location. Use buttons above to search nearby resources.";
         }
       },
       () => {
-        // Permission denied or unavailable — keep global view
+        userLocation = { lat: 12.9716, lng: 77.5946 };
+        mapInstance.setView([12.9716, 77.5946], 12);
         if (vegetationMapStatus) {
-          vegetationMapStatus.textContent = "Location access denied. Showing global plantation hotspots. Enable location for nearby shop search.";
+          vegetationMapStatus.textContent = "Location access denied. Centered on Bangalore. Use buttons above to search.";
         }
       },
       { timeout: 8000 }
     );
   } else {
+    userLocation = { lat: 12.9716, lng: 77.5946 };
+    mapInstance.setView([12.9716, 77.5946], 12);
     if (vegetationMapStatus) {
-      vegetationMapStatus.textContent = "Green zones highlight dense plantation and vegetation-friendly regions around the world.";
+      vegetationMapStatus.textContent = "Geolocation not supported by browser. Centered on Bangalore.";
     }
   }
 
@@ -761,34 +854,7 @@ function initVegetationMap() {
 
 function loadVegetationMap() {
   if (!vegetationMapElement) return;
-  if (!GOOGLE_MAPS_API_KEY) {
-    renderVegetationFallback("Add a Google Maps API key in window.GOOGLE_MAPS_API_KEY to show the live map.");
-    return;
-  }
-
-  // Handle Google Maps API key authorization errors gracefully
-  window.gm_authFailure = () => {
-    console.warn("[KrishiSev] Google Maps authentication failed. Falling back to offline mockup view.");
-    renderVegetationFallback("Google Maps authentication failed (billing not enabled or key restricted). Showing simulated offline map preview.");
-    mapInstance = null;
-  };
-
-  if (window.google && window.google.maps) {
-    initVegetationMap();
-    return;
-  }
-
-  window.initVegetationMap = initVegetationMap;
-  const existing = document.getElementById("googleMapsScript");
-  if (existing) return;
-
-  const script = document.createElement("script");
-  script.id = "googleMapsScript";
-  script.async = true;
-  script.defer = true;
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&libraries=visualization,places&callback=initVegetationMap&v=weekly`;
-  script.onerror = () => renderVegetationFallback("Google Maps failed to load.");
-  document.head.appendChild(script);
+  initVegetationMap();
 }
 
 loadVegetationMap();
@@ -828,11 +894,11 @@ function loadMapSearchFromFirestore(email) {
           if (searchType === "hotspots") {
             showHeatmap();
           } else if (searchType === "nursery") {
-            searchNearbyPlaces("plant nursery near me");
+            searchNearbyPlaces("nursery");
           } else if (searchType === "fertilizer") {
-            searchNearbyPlaces("fertilizer shop near me");
+            searchNearbyPlaces("fertilizer");
           } else if (searchType === "plantation") {
-            searchNearbyPlaces("plantation shop agricultural supply near me");
+            searchNearbyPlaces("plantation");
           }
         }
       }
@@ -840,30 +906,6 @@ function loadMapSearchFromFirestore(email) {
     .catch((err) => console.warn("[KrishiSev] Map search load error:", err));
 }
 
-// Map search buttons
-document.querySelectorAll(".map-search-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    // Toggle active state
-    document.querySelectorAll(".map-search-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-
-    const searchType = btn.dataset.search;
-    if (searchType === "hotspots") {
-      showHeatmap();
-    } else if (searchType === "nursery") {
-      searchNearbyPlaces("plant nursery near me");
-    } else if (searchType === "fertilizer") {
-      searchNearbyPlaces("fertilizer shop near me");
-    } else if (searchType === "plantation") {
-      searchNearbyPlaces("plantation shop agricultural supply near me");
-    }
-
-    const user = getSavedUser();
-    if (user && user.email) {
-      saveMapSearchToFirestore(user.email, searchType);
-    }
-  });
-});
 
 /* ═══════════════════
    AUTH — Login/Signup

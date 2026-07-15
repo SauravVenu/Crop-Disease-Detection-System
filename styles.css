@@ -1520,3 +1520,31 @@ select:focus {
   background: rgba(220, 53, 69, 0.1);
 }
 
+/* ── Leaflet Custom Styling & Dark Mode Integration ── */
+body.dark #vegetationMap {
+  filter: invert(90%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+/* Fix popup text visibility in inverted dark mode */
+body.dark .leaflet-popup-content-wrapper,
+body.dark .leaflet-popup-tip {
+  filter: invert(100%) hue-rotate(180deg);
+  background: #111827;
+  color: #f3f4f6;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.leaflet-container {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 12px;
+}
+
+.user-leaflet-marker {
+  transition: transform 0.2s ease-out;
+}
+
+@keyframes pulseMarker {
+  0% { transform: scale(0.95); opacity: 0.85; }
+  100% { transform: scale(1.15); opacity: 1; }
+}
+

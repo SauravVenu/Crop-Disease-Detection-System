@@ -875,24 +875,8 @@ class AgriBotHandler(SimpleHTTPRequestHandler):
         if path == "/api/health":
             json_response(self, {"ok": True, "service": "KRISHISEV", "time": int(time.time())})
             return
-        if path in ("/", "/index.html"):
-            index_path = ROOT / "index.html"
-            try:
-                content = index_path.read_text(encoding="utf-8")
-                maps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
-                content = content.replace(
-                    'window.GOOGLE_MAPS_API_KEY = window.GOOGLE_MAPS_API_KEY || "";',
-                    f'window.GOOGLE_MAPS_API_KEY = window.GOOGLE_MAPS_API_KEY || "{maps_key}";'
-                )
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Cache-Control", "no-store")
-                self.end_headers()
-                self.wfile.write(content.encode("utf-8"))
-                return
-            except Exception as e:
-                self.send_error(500, f"Error serving index.html: {e}")
-                return
+        if path == "/":
+            self.path = "/index.html"
         if path == "/script.js":
             script_path = ROOT / "script.js"
             try:

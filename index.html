@@ -9,6 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <!-- Leaflet mapping library -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -447,7 +450,7 @@
           <div class="tool-panel map-panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Google Maps vegetation layer</p>
+                <p class="eyebrow">OpenStreetMap vegetation layer</p>
                 <h2>Plantation Map & Nearby Shops</h2>
               </div>
               <span class="status-pill compact">Interactive</span>
@@ -486,7 +489,7 @@
                 <div class="map-results-info" id="mapResultsInfo" hidden>
                   <p class="map-results-count" id="mapResultsCount"></p>
                 </div>
-                <p class="map-status" id="vegetationMapStatus">Loading Google Maps...</p>
+                <p class="map-status" id="vegetationMapStatus">Loading Map...</p>
               </div>
             </div>
           </div>
@@ -495,9 +498,6 @@
 
     </main>
   </div>
-  <script>
-    window.GOOGLE_MAPS_API_KEY = window.GOOGLE_MAPS_API_KEY || "";
-  </script>
   <script src="script.js"></script>
 </body>
 </html>

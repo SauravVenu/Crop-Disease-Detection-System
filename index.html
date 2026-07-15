@@ -48,11 +48,7 @@
     <div class="login-panel">
       <div class="login-brand-header">
         <div class="brand-logo">
-          <span class="brand-mark large">K</span>
-          <div>
-            <p class="eyebrow">KRISHISEV</p>
-            <small class="brand-tagline">Smart Farm Desk</small>
-          </div>
+          <img src="assets/krishisev-logo.svg" alt="KRISHISEV Logo" class="login-logo-img" />
         </div>
         <button class="icon-button" id="loginThemeToggle" type="button" title="Toggle theme" aria-label="Toggle theme">☼</button>
       </div>
@@ -83,11 +79,7 @@
   <div class="app-shell">
     <aside class="sidebar">
       <a class="brand" href="#dashboard" aria-label="KRISHISEV home">
-        <span class="brand-mark">K</span>
-        <span>
-          <strong>KRISHISEV</strong>
-          <small>Smart farm desk</small>
-        </span>
+        <img src="assets/krishisev-logo.svg" alt="KRISHISEV" class="sidebar-logo-img" />
       </a>
 
       <nav class="nav-list" aria-label="Primary">
@@ -120,9 +112,9 @@
 
     <main>
       <header class="topbar">
-        <div>
+        <div class="topbar-brand">
+          <img src="assets/krishisev-logo.svg" alt="KRISHISEV" class="topbar-logo-img" />
           <p class="eyebrow">AI powered farming support</p>
-          <h1>KRISHISEV</h1>
         </div>
         <div class="top-actions">
           <span class="api-badge ready" id="farmerBadge">Farmer</span>
@@ -137,12 +129,20 @@
       <!-- ── DASHBOARD VIEW ── -->
       <div id="view-dashboard" class="app-view">
         <section class="hero-panel" id="dashboard">
+          <!-- Hero Background Slideshow -->
+          <div class="hero-slideshow" id="heroSlideshow">
+            <div class="hero-slide active" style="background-image:url('assets/hero_slide_1.png');"></div>
+            <div class="hero-slide" style="background-image:url('assets/hero_slide_2.png');"></div>
+            <div class="hero-slide" style="background-image:url('assets/hero_slide_3.png');"></div>
+            <div class="hero-slide" style="background-image:url('assets/hero_slide_4.png');"></div>
+          </div>
+          <div class="hero-overlay-gradient"></div>
           <div class="hero-copy">
-            <p class="status-pill">XGBoost crop engine + ResNet disease vision</p>
-            <h2>One intelligent workspace for soil, crop and plant health decisions.</h2>
+            <p class="status-pill">🇮🇳 Built for Indian Agriculture</p>
+            <h2>Smarter Farming.<br>Better Harvests.</h2>
+            <p class="hero-subheading">Everything farmers need in one intelligent platform.</p>
             <p>
-              Farmers can ask questions, enter soil values, upload affected crop images and get quick,
-              actionable guidance from a single friendly farming assistant.
+              From crop recommendations and soil analysis to disease detection, AI assistance, and nearby agricultural resources, KRISHISEV helps farmers make informed decisions every day.
             </p>
             <div class="hero-actions">
               <button class="primary-button" data-target="view-crop">Recommend crop</button>
@@ -479,8 +479,8 @@
           <div class="tool-panel map-panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Local Resource Finder</p>
-                <h2>Nearby Agricultural Resources</h2>
+                <p class="eyebrow">Nearby Agricultural Resources</p>
+                <h2>Local Resource Finder</h2>
               </div>
               <span class="status-pill compact">Interactive</span>
             </div>
@@ -491,7 +491,7 @@
                 <span>🌱</span> Nearby Nurseries
               </button>
               <button class="map-search-btn" id="mapBtnFertilizer" data-search="fertilizer">
-                <span>🧪</span> Fertilizer & Seed Shops
+                <span>🧪</span> Fertilizer &amp; Seed Shops
               </button>
               <button class="map-search-btn" id="mapBtnOffice" data-search="office">
                 <span>🏛️</span> Agricultural Offices
@@ -501,8 +501,8 @@
               </button>
             </div>
 
-            <div class="map-layout">
-              <div class="map-container-wrapper" style="position: relative; display: block; border-radius: 8px; border: 1px solid var(--line); overflow: hidden; height: 450px;">
+            <div class="map-layout map-layout-fullwidth">
+              <div class="map-container-wrapper" style="position: relative; display: block; border-radius: 8px; border: 1px solid var(--line); overflow: hidden; height: 500px; width: 100%;">
                 <!-- Manual Location Search Overlay -->
                 <div class="map-search-bar" id="mapSearchBar">
                   <div class="search-input-group">
@@ -535,21 +535,8 @@
                 </div>
               </div>
 
-              <div class="map-sidecard">
-                <p class="map-kicker">Nearby Agricultural Resources</p>
-                <strong>Local Resource Finder</strong>
-                <p class="map-copy" style="margin-bottom: 12px; line-height: 1.4;">
-                  This map helps farmers discover agricultural facilities near their current location. Use the buttons above to locate resources:
-                </p>
-                <ul style="margin: 0 0 16px; padding-left: 20px; font-size: 13px; color: rgba(255,255,255,0.72); line-height: 1.5; display: flex; flex-direction: column; gap: 6px; text-align: left;">
-                  <li><strong>🌱 Nurseries</strong>: Find plant nurseries and botanical centers.</li>
-                  <li><strong>🧪 Fertilizer & Seed Shops</strong>: Locates seed outlets, fertilizer depots, and crop inputs.</li>
-                  <li><strong>🏛️ Agricultural Offices</strong>: Finds government Krishi Bhavans, extension offices, and research universities.</li>
-                  <li><strong>🚜 Agricultural Services</strong>: Locates tractor rentals, equipment repair, and farming services.</li>
-                </ul>
-                <p class="map-copy" style="font-size: 12px; border-top: 1px solid var(--line); padding-top: 12px; color: rgba(255,255,255,0.72); margin: 0;">
-                  The application searches nearby resources using OpenStreetMap and falls back to locally stored verified resources when live data is offline.
-                </p>
+              <!-- Status bar below full-width map -->
+              <div class="map-status-bar">
                 <div class="map-results-info" id="mapResultsInfo" hidden>
                   <p class="map-results-count" id="mapResultsCount"></p>
                 </div>
@@ -558,7 +545,6 @@
             </div>
           </div>
         </section>
-      </div>
 
     </main>
   </div>

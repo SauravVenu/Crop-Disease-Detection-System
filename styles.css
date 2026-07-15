@@ -411,6 +411,7 @@ h2 {
 
 .hero-panel {
   display: flex;
+  position: relative;
   min-height: 420px;
   overflow: hidden;
   padding: 34px;
@@ -419,6 +420,122 @@ h2 {
   border-radius: 8px;
   box-shadow: var(--shadow);
 }
+
+/* ── Hero Slideshow ── */
+.hero-slideshow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.hero-slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
+  animation: heroKenBurns 12s ease-in-out infinite alternate;
+}
+
+.hero-slide.active {
+  opacity: 1;
+  z-index: 1;
+}
+
+@keyframes heroKenBurns {
+  0%   { transform: scale(1.0) translate(0, 0); }
+  100% { transform: scale(1.08) translate(-1%, -0.5%); }
+}
+
+.hero-overlay-gradient {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(135deg, rgba(10, 30, 20, 0.82) 0%, rgba(16, 40, 28, 0.65) 60%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+/* Hero copy sits above the slideshow and overlay */
+.hero-copy {
+  position: relative;
+  z-index: 3;
+  align-self: center;
+  max-width: 620px;
+}
+
+.hero-copy h2 {
+  font-size: clamp(34px, 4.5vw, 62px);
+  line-height: 1.1;
+  margin: 0 0 10px;
+}
+
+.hero-copy p {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+
+.hero-subheading {
+  font-size: 20px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  margin: 0 0 10px;
+  letter-spacing: 0.01em;
+}
+
+/* ── Logo images ── */
+.sidebar-logo-img {
+  width: 160px;
+  height: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.topbar-logo-img {
+  height: 38px;
+  width: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+.login-logo-img {
+  height: 42px;
+  width: auto;
+  display: block;
+}
+
+/* ── Full-width map layout (no sidecard) ── */
+.map-layout-fullwidth {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.map-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: rgba(16, 35, 29, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+body.dark .map-status-bar {
+  background: rgba(255, 255, 255, 0.04);
+}
+
 
 .map-section {
   margin-top: 18px;
@@ -537,20 +654,6 @@ h2 {
   box-shadow: 0 0 0 5px rgba(215, 237, 171, 0.18);
 }
 
-.hero-copy {
-  align-self: center;
-  max-width: 620px;
-}
-
-.hero-copy h2 {
-  font-size: clamp(36px, 5vw, 66px);
-}
-
-.hero-copy p {
-  color: rgba(255, 255, 255, 0.76);
-  font-size: 17px;
-  line-height: 1.7;
-}
 
 .status-pill {
   display: inline-flex;

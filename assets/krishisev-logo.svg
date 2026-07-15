@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" fill="none">
+  <!-- Circle background -->
+  <circle cx="24" cy="24" r="22" fill="#1a7a4a"/>
+  <!-- Leaf shape -->
+  <path d="M24 10 C14 16, 10 26, 16 34 C18 37, 22 38, 24 36 C26 38, 30 37, 32 34 C38 26, 34 16, 24 10Z" fill="#ffffff" opacity="0.95"/>
+  <!-- Stem -->
+  <line x1="24" y1="36" x2="24" y2="41" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  <!-- Text: KRISHISEV -->
+  <text x="54" y="22" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="#1a7a4a" letter-spacing="0.5">KRISHISEV</text>
+  <!-- Tagline -->
+  <text x="55" y="36" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="500" fill="#5a9e78" letter-spacing="0.3">Smart Farm Desk</text>
+</svg>

@@ -58,74 +58,164 @@ button {
 .login-screen {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 2000;
   display: grid;
-  place-items: center;
+  grid-template-columns: 1.2fr 1fr;
   min-height: 100vh;
-  padding: 28px;
-  background:
-    linear-gradient(135deg, rgba(25, 135, 84, 0.18), transparent 34%),
-    radial-gradient(circle at 82% 12%, rgba(241, 184, 75, 0.26), transparent 26%),
-    var(--bg);
+  padding: 0;
+  background: var(--bg);
+  overflow: hidden;
 }
 
 .login-screen.hidden {
-  display: none;
+  display: none !important;
 }
 
-.login-card {
-  align-self: center;
-  border-radius: 8px;
-  box-shadow: var(--shadow);
+.login-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: clamp(32px, 5vw, 64px);
+  height: 100vh;
+  overflow: hidden;
+  color: #ffffff;
+}
+
+.slideshow-container {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
+  z-index: 1;
+}
+
+.slide.active {
+  opacity: 1;
+  z-index: 2;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(16, 35, 29, 0.85) 100%);
+  z-index: 3;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 4;
+  max-width: 600px;
+  text-align: left;
+}
+
+.hero-badge {
+  display: inline-block;
+  background: rgba(25, 135, 84, 0.9);
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.hero-content h1 {
+  font-size: clamp(24px, 4.5vw, 40px);
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0 0 16px 0;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.hero-content p {
+  font-size: clamp(14px, 2vw, 16px);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .login-panel {
-  display: grid;
-  gap: 18px;
-  width: min(620px, 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(24px, 4vw, 48px);
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--bg);
+  border-left: 1px solid var(--line);
+  position: relative;
+  z-index: 5;
 }
 
-.login-brand {
+.login-brand-header {
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: space-between;
+  width: min(440px, 100%);
+  margin-bottom: 24px;
 }
 
-.login-brand h1 {
-  margin: 2px 0 0;
-}
-
-.login-brand p {
-  margin: 0;
-}
-
-.login-card {
-  position: relative;
-  display: grid;
-  gap: 16px;
-  padding: clamp(28px, 5vw, 64px);
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--line);
-}
-
-.brand-mark.large {
-  width: 66px;
-  height: 66px;
-  font-size: 28px;
-}
-
-.auth-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.brand-logo {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
-body.dark .login-card {
-  background: rgba(23, 33, 29, 0.94);
+.brand-logo .brand-mark.large {
+  width: 46px;
+  height: 46px;
+  font-size: 20px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--green);
+  color: white;
+  font-weight: 800;
+}
+
+.brand-logo .eyebrow {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.brand-tagline {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.login-card {
+  width: min(440px, 100%);
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: clamp(24px, 4vw, 36px);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 18px;
 }
 
 .login-card h2 {
-  margin-bottom: 0;
+  margin: 4px 0 0;
 }
 
 .field-hint {
@@ -134,6 +224,12 @@ body.dark .login-card {
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
+}
+
+.auth-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .login-error {
@@ -340,16 +436,13 @@ h2 {
 }
 
 .vegetation-map {
-  display: grid;
-  place-items: center;
-  min-height: 420px;
+  display: block;
+  width: 100%;
+  height: 450px;
+  position: relative;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(25, 135, 84, 0.14), transparent 28%),
-    radial-gradient(circle at 70% 35%, rgba(185, 216, 74, 0.12), transparent 22%),
-    linear-gradient(135deg, rgba(16, 35, 29, 0.08), rgba(16, 35, 29, 0.02));
 }
 
   .map-fallback {
@@ -1546,5 +1639,145 @@ body.dark .leaflet-popup-tip {
 @keyframes pulseMarker {
   0% { transform: scale(0.95); opacity: 0.85; }
   100% { transform: scale(1.15); opacity: 1; }
+}
+
+.agri-pin {
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.agri-pin:hover {
+  transform: scale(1.2) translateY(-2px);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.25));
+}
+
+/* Map Auto-suggest & Overlays */
+.map-search-bar {
+  position: absolute;
+  top: 16px;
+  left: 56px;
+  z-index: 1000;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.search-input-group {
+  display: flex;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.search-input-group input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  width: 100%;
+  color: var(--text);
+  padding: 4px 0;
+}
+
+#clearMapSearch {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  color: var(--muted);
+  cursor: pointer;
+  display: none;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.autocomplete-suggestions {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: none;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1001;
+  text-align: left;
+}
+
+.suggestion-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  transition: background 0.15s ease;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover {
+  background: rgba(25, 135, 84, 0.08);
+}
+
+.map-overlay-message {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 21, 18, 0.85);
+  z-index: 1002;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  padding: 24px;
+  text-align: center;
+}
+
+.overlay-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: var(--text);
+}
+
+.overlay-card h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.overlay-card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Map Spinner loading indicator */
+.map-loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+  border-top-color: var(--green);
+  animation: mapSpin 0.8s linear infinite;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+@keyframes mapSpin {
+  to { transform: rotate(360deg); }
 }
 

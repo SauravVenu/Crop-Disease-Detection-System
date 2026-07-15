@@ -19,18 +19,6 @@ const chatInput = document.getElementById("chatInput");
 const chatWindow = document.getElementById("chatWindow");
 
 const SESSION_KEY = "krishiSevUser";
-const VEGETATION_HOTSPOTS = [
-  { name: "Amazon Basin", lat: -3.5, lng: -62.0, weight: 5.0 },
-  { name: "Congo Basin", lat: -0.5, lng: 23.5, weight: 4.6 },
-  { name: "Southeast Asia", lat: 10.5, lng: 105.0, weight: 4.8 },
-  { name: "Western Ghats", lat: 11.0, lng: 76.0, weight: 4.2 },
-  { name: "Indo-Gangetic Plain", lat: 26.5, lng: 79.0, weight: 4.7 },
-  { name: "East Africa Rift", lat: 0.5, lng: 36.5, weight: 3.4 },
-  { name: "Eastern China", lat: 31.0, lng: 118.0, weight: 4.1 },
-  { name: "US Midwest", lat: 41.5, lng: -93.5, weight: 3.8 },
-  { name: "Central Europe", lat: 48.0, lng: 11.0, weight: 3.0 },
-  { name: "Brazil Atlantic Coast", lat: -15.0, lng: -47.5, weight: 4.0 }
-];
 
 /* ── Session helpers ── */
 function getSavedUser() {
@@ -422,6 +410,13 @@ function switchView(targetId) {
       link.classList.remove("active");
     }
   });
+
+  if (targetId === "view-map" && mapInstance) {
+    setTimeout(() => {
+      mapInstance.invalidateSize();
+    }, 100);
+  }
+
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -436,17 +431,28 @@ document.querySelectorAll("[data-target]").forEach((element) => {
 });
 
 /* ── Theme toggle ── */
-document.getElementById("themeToggle").addEventListener("click", () => {
-  document.body.classList.toggle("dark");
-});
+function toggleTheme() {
+  const isDark = document.body.classList.toggle("dark");
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+}
+
+const themeToggle = document.getElementById("themeToggle");
+if (themeToggle) {
+  themeToggle.addEventListener("click", toggleTheme);
+}
+
+const loginThemeToggle = document.getElementById("loginThemeToggle");
+if (loginThemeToggle) {
+  loginThemeToggle.addEventListener("click", toggleTheme);
+}
 
 /* ═══════════════════════════════════
    MAP — Vegetation heatmap & Places (Leaflet.js + OSM)
    ═══════════════════════════════════ */
 let mapInstance = null;
-let hotspotMarkers = [];
 let placeMarkers = [];
 let userLocation = null;
+let userMarkerInstance = null;
 
 // Local dataset of verified agricultural resources for offline / fallback demonstrations
 const LOCAL_AGRI_DATASET = [
@@ -480,19 +486,23 @@ const LOCAL_AGRI_DATASET = [
   // --- Agricultural Universities & Research Centers ---
   { name: "University of Agricultural Sciences (UAS)", lat: 13.0784, lng: 77.5744, address: "GKVK Campus, Bellary Road, Bangalore, Karnataka", type: "university" },
   { name: "Indian Agricultural Research Institute (IARI)", lat: 28.6345, lng: 77.1610, address: "Pusa, New Delhi", type: "university" },
-  { name: "Kerala Agricultural University Extension", lat: 9.9912, lng: 76.2890, address: "Kochi Center, Kerala", type: "university" },
 
   // --- Organic Farming Centers ---
   { name: "National Centre of Organic Farming (NCOF)", lat: 28.6790, lng: 77.4410, address: "Hapur Road, Ghaziabad near Delhi NCR", type: "organic" },
   { name: "Organic Agriculture Development Association", lat: 12.9212, lng: 77.6405, address: "HSR Layout, Bangalore, Karnataka", type: "organic" },
-  { name: "Bio-dynamic Organic Research Station", lat: 19.1412, lng: 72.8234, address: "Borivali West, Mumbai, Maharashtra", type: "organic" }
+  { name: "Bio-dynamic Organic Research Station", lat: 19.1412, lng: 72.8234, address: "Borivali West, Mumbai, Maharashtra", type: "organic" },
+
+  // --- Agricultural Services (Tractor hiring, Custom centers) ---
+  { name: "Agri-Services & Tractor Hiring Center", lat: 12.9811, lng: 77.5855, address: "Hebbal Main Road, Bangalore, Karnataka", type: "service" },
+  { name: "Krishi Seva Farm Machinery Center", lat: 9.9412, lng: 76.3211, address: "Vytila, Kochi, Kerala", type: "service" },
+  { name: "Pusa Agricultural Equipment Service Depot", lat: 28.6315, lng: 77.1510, address: "IARI Campus, Pusa, New Delhi", type: "service" }
 ];
 
 function renderVegetationFallback(message) {
   if (vegetationMapElement) {
     vegetationMapElement.innerHTML = `
       <div class="map-fallback">
-        <strong>Map preview unavailable</strong>
+        <strong>Map explorer unavailable</strong>
         <p>${message}</p>
       </div>
     `;
@@ -509,108 +519,88 @@ function clearPlaceMarkers() {
   placeMarkers = [];
 }
 
-function showHotspotMarkers() {
-  hideHotspotMarkers();
-  VEGETATION_HOTSPOTS.forEach((hotspot) => {
-    const circle = L.circle([hotspot.lat, hotspot.lng], {
-      color: "#14532d",
-      weight: 1,
-      fillColor: "#22c55e",
-      fillOpacity: 0.35 + (hotspot.weight * 0.08),
-      radius: hotspot.weight * 130000
-    }).bindPopup(`<strong>${hotspot.name}</strong><br>Vegetation density score: ${hotspot.weight}/5`)
-      .addTo(mapInstance);
-    hotspotMarkers.push(circle);
-  });
-}
-
-function hideHotspotMarkers() {
-  if (mapInstance) {
-    hotspotMarkers.forEach(layer => mapInstance.removeLayer(layer));
-  }
-  hotspotMarkers = [];
-}
-
-function showHeatmap() {
-  clearPlaceMarkers();
-  showHotspotMarkers();
-  if (mapInstance) {
-    mapInstance.setView([12, 10], 2);
-  }
-  const resultsInfo = document.getElementById("mapResultsInfo");
-  if (resultsInfo) resultsInfo.hidden = true;
-  if (vegetationMapStatus) {
-    vegetationMapStatus.textContent = "Green zones highlight dense plantation and vegetation-friendly regions around the world.";
-  }
-}
-
 function searchNearbyPlaces(category) {
   if (!mapInstance) return;
 
   clearPlaceMarkers();
-  hideHotspotMarkers();
 
   const labelMap = {
     nursery: "Nurseries",
-    fertilizer: "Fertilizer Shops & Seed Centers",
-    plantation: "Agricultural Offices, Laboratories & Research Centers"
+    fertilizer: "Fertilizer & Seed Shops",
+    office: "Agricultural Offices / Krishi Bhavans",
+    service: "Agricultural Services & Tractor Hiring Centers"
   };
   const label = labelMap[category] || category;
 
-  if (vegetationMapStatus) {
-    vegetationMapStatus.textContent = `Searching for nearby ${label}...`;
+  if (!userLocation) {
+    const overlay = document.getElementById("mapOverlayMessage");
+    if (overlay) overlay.style.display = "flex";
+    if (vegetationMapStatus) {
+      vegetationMapStatus.textContent = "Location access required. Please search for a city manually.";
+    }
+    return;
   }
 
-  if (userLocation) {
-    doOsmSearch(category, userLocation.lat, userLocation.lng);
-  } else {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          doOsmSearch(category, userLocation.lat, userLocation.lng);
-        },
-        () => {
-          userLocation = { lat: 12.9716, lng: 77.5946 };
-          doOsmSearch(category, userLocation.lat, userLocation.lng);
-        },
-        { timeout: 5000 }
-      );
-    } else {
-      userLocation = { lat: 12.9716, lng: 77.5946 };
-      doOsmSearch(category, userLocation.lat, userLocation.lng);
-    }
+  if (vegetationMapStatus) {
+    vegetationMapStatus.innerHTML = `<span class="map-loading-spinner"></span>Searching for nearby ${label}...`;
   }
+
+  updateUserLocationMarker(userLocation.lat, userLocation.lng);
+  doOsmSearch(category, userLocation.lat, userLocation.lng);
 }
 
-function getOverpassQuery(category, lat, lng) {
+function getOverpassQuery(category, lat, lng, radius) {
   let subQueries = "";
+  const r = radius;
+  // CRITICAL: Overpass API around:radius,lat,lng — NO spaces between elements.
   if (category === "nursery") {
     subQueries = `
-      node["shop"="nursery"](around:15000, ${lat}, ${lng});
-      way["shop"="nursery"](around:15000, ${lat}, ${lng});
-      node["landuse"="nursery"](around:15000, ${lat}, ${lng});
-      way["landuse"="nursery"](around:15000, ${lat}, ${lng});
+      node["shop"="nursery"](around:${r},${lat},${lng});
+      node["shop"="garden_centre"](around:${r},${lat},${lng});
+      node["shop"="florist"](around:${r},${lat},${lng});
+      node["landuse"="plant_nursery"](around:${r},${lat},${lng});
+      way["shop"="nursery"](around:${r},${lat},${lng});
+      way["shop"="garden_centre"](around:${r},${lat},${lng});
+      way["landuse"="plant_nursery"](around:${r},${lat},${lng});
     `;
   } else if (category === "fertilizer") {
     subQueries = `
-      node["shop"="fertilizer"](around:15000, ${lat}, ${lng});
-      node["shop"="agricultural_supplies"](around:15000, ${lat}, ${lng});
-      node["shop"="seeds"](around:15000, ${lat}, ${lng});
-      way["shop"="fertilizer"](around:15000, ${lat}, ${lng});
-      way["shop"="agricultural_supplies"](around:15000, ${lat}, ${lng});
+      node["shop"="agrarian"](around:${r},${lat},${lng});
+      node["shop"="agricultural_supplies"](around:${r},${lat},${lng});
+      node["shop"="fertilizer"](around:${r},${lat},${lng});
+      node["shop"="seeds"](around:${r},${lat},${lng});
+      node["shop"="farm_supply"](around:${r},${lat},${lng});
+      node["shop"="farm"](around:${r},${lat},${lng});
+      way["shop"="agrarian"](around:${r},${lat},${lng});
+      way["shop"="agricultural_supplies"](around:${r},${lat},${lng});
+      way["shop"="farm_supply"](around:${r},${lat},${lng});
     `;
-  } else if (category === "plantation") {
+  } else if (category === "office") {
     subQueries = `
-      node["office"="government"]["name"~"Agriculture|Krishi", i](around:15000, ${lat}, ${lng});
-      node["office"="government"]["government"~"agriculture", i](around:15000, ${lat}, ${lng});
-      node["amenity"="university"]["name"~"Agriculture|Krishi|Agri", i](around:15000, ${lat}, ${lng});
-      node["shop"="organic"](around:15000, ${lat}, ${lng});
-      node["building"="laboratory"]["name"~"Soil", i](around:15000, ${lat}, ${lng});
-      node["office"="government"]["name"~"Soil", i](around:15000, ${lat}, ${lng});
+      node["office"="government"]["name"~"Agriculture|Krishi|Agri|Horticult",i](around:${r},${lat},${lng});
+      node["office"="government"]["government"~"agriculture",i](around:${r},${lat},${lng});
+      node["amenity"="government"]["name"~"Agriculture|Krishi",i](around:${r},${lat},${lng});
+      node["amenity"="university"]["name"~"Agriculture|Krishi|Agri",i](around:${r},${lat},${lng});
+      node["amenity"="college"]["name"~"Agriculture|Krishi|Agri",i](around:${r},${lat},${lng});
+      node["name"~"Krishi Bhavan|Krishi Vigyan|Agricultural Office|Agri Department",i](around:${r},${lat},${lng});
+      way["office"="government"]["name"~"Agriculture|Krishi",i](around:${r},${lat},${lng});
+      way["amenity"="university"]["name"~"Agriculture|Agri",i](around:${r},${lat},${lng});
+    `;
+  } else if (category === "service") {
+    subQueries = `
+      node["shop"="tractor"](around:${r},${lat},${lng});
+      node["shop"="farm_machinery"](around:${r},${lat},${lng});
+      node["shop"="machinery"](around:${r},${lat},${lng});
+      node["shop"="organic"](around:${r},${lat},${lng});
+      node["amenity"="laboratory"]["name"~"Soil|soil",i](around:${r},${lat},${lng});
+      node["office"="government"]["name"~"Soil Testing|soil testing",i](around:${r},${lat},${lng});
+      node["craft"="agricultural_engines"](around:${r},${lat},${lng});
+      node["name"~"Custom Hiring|Tractor Hire|Farm Service|Krishi Seva",i](around:${r},${lat},${lng});
+      way["shop"="tractor"](around:${r},${lat},${lng});
+      way["shop"="farm_machinery"](around:${r},${lat},${lng});
     `;
   }
-  return `[out:json][timeout:12];(${subQueries});out center 15;`;
+  return `[out:json][timeout:20];(${subQueries});out center 20;`;
 }
 
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -630,7 +620,8 @@ function searchLocalDataset(queryType, userLat, userLng) {
     .filter(item => {
       if (queryType === "nursery") return item.type === "nursery";
       if (queryType === "fertilizer") return item.type === "fertilizer" || item.type === "seed";
-      if (queryType === "plantation") return item.type === "office" || item.type === "lab" || item.type === "university" || item.type === "organic";
+      if (queryType === "office") return item.type === "office" || item.type === "university";
+      if (queryType === "service") return item.type === "lab" || item.type === "organic" || item.type === "service";
       return false;
     })
     .map(item => ({
@@ -670,8 +661,12 @@ function loadLocalFallbackData(category, lat, lng) {
   renderPlaceMarkers(items, category, true, lat, lng);
 }
 
-function doOsmSearch(category, lat, lng) {
-  mapInstance.setView([lat, lng], 12);
+function updateUserLocationMarker(lat, lng) {
+  if (!mapInstance) return;
+
+  if (userMarkerInstance) {
+    mapInstance.removeLayer(userMarkerInstance);
+  }
 
   const blueIcon = L.divIcon({
     className: "user-leaflet-marker",
@@ -679,15 +674,49 @@ function doOsmSearch(category, lat, lng) {
     iconSize: [14, 14],
     iconAnchor: [7, 7]
   });
-  const userMarker = L.marker([lat, lng], { icon: blueIcon })
+
+  userMarkerInstance = L.marker([lat, lng], { icon: blueIcon, zIndexOffset: 1000 })
     .bindPopup(`<div style="font-family:Inter,sans-serif;padding:2px">
-      <strong style="color:#4285F4;font-size:13px">📍 Your Location</strong>
-      <p style="margin:4px 0 0;color:#555;font-size:11px">Centering search here.</p>
+      <strong style="color:#4285F4;font-size:13px">📍 You are here</strong>
+      <p style="margin:4px 0 0;color:#555;font-size:11px">Centering agricultural searches around this position.</p>
     </div>`)
     .addTo(mapInstance);
-  placeMarkers.push(userMarker);
+}
 
-  const query = getOverpassQuery(category, lat, lng);
+function getAgriMarkerHtml(color, iconEmoji) {
+  return `
+    <div class="agri-pin" style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18 32C18 32 30 22 30 14C30 7.37258 24.6274 2 18 2C11.3726 2 6 7.37258 6 14C6 22 18 32 18 32Z" fill="${color}" stroke="#ffffff" stroke-width="2"/>
+        <circle cx="18" cy="14" r="9" fill="#ffffff"/>
+      </svg>
+      <span style="position: absolute; top: 5px; font-size: 13px; z-index: 2;">${iconEmoji}</span>
+    </div>
+  `;
+}
+
+function doOsmSearch(category, lat, lng, radiusIndex) {
+  const radii = [30000, 50000, 75000];
+  const idx = radiusIndex || 0;
+  const radius = radii[idx];
+
+  const labelMap = {
+    nursery: "nurseries",
+    fertilizer: "fertilizer & seed shops",
+    office: "agricultural offices",
+    service: "agricultural services"
+  };
+  const label = labelMap[category] || category;
+
+  if (vegetationMapStatus) {
+    const radiusKm = radius / 1000;
+    vegetationMapStatus.innerHTML = `<span class="map-loading-spinner"></span>Searching for ${label} within ${radiusKm} km...`;
+  }
+
+  mapInstance.setView([lat, lng], 12);
+  updateUserLocationMarker(lat, lng);
+
+  const query = getOverpassQuery(category, lat, lng, radius);
   const url = "https://overpass-api.de/api/interpreter";
 
   fetch(url, {
@@ -704,81 +733,159 @@ function doOsmSearch(category, lat, lng) {
   .then(data => {
     const elements = data.elements || [];
     if (elements.length === 0) {
-      console.log("[KrishiSev] Overpass returned zero results. Loading from local database...");
+      // Try next larger radius
+      if (idx < radii.length - 1) {
+        console.log(`[KrishiSev] No results at ${radius/1000}km. Expanding to ${radii[idx+1]/1000}km...`);
+        doOsmSearch(category, lat, lng, idx + 1);
+        return;
+      }
+      // All radii exhausted → fall back to local database
+      console.log("[KrishiSev] No live results found. Loading from local database...");
+      if (vegetationMapStatus) {
+        vegetationMapStatus.textContent = `No live results found. Showing verified local resources.`;
+      }
       loadLocalFallbackData(category, lat, lng);
       return;
     }
 
     const items = elements.map(el => {
       const tags = el.tags || {};
-      let name = tags.name || tags.operator || "";
+      let name = tags.name || tags.operator || tags["name:en"] || "";
       if (!name) {
         if (category === "nursery") name = "Local Nursery";
-        else if (category === "fertilizer") name = "Fertilizer Depot";
-        else name = "Agricultural Office";
+        else if (category === "fertilizer") name = "Fertilizer/Seed Shop";
+        else if (category === "office") name = "Agricultural Office";
+        else name = "Agricultural Service Center";
       }
       const elLat = el.lat || (el.center && el.center.lat);
       const elLng = el.lon || (el.center && el.center.lon);
-      
+
       const street = tags["addr:street"] || "";
-      const city = tags["addr:city"] || "";
+      const city = tags["addr:city"] || tags["addr:town"] || tags["addr:village"] || "";
       const address = [street, city].filter(Boolean).join(", ") || "Located nearby";
 
       return { name, lat: elLat, lng: elLng, address };
     }).filter(item => item.lat && item.lng);
 
+    if (items.length === 0) {
+      if (idx < radii.length - 1) {
+        doOsmSearch(category, lat, lng, idx + 1);
+        return;
+      }
+      loadLocalFallbackData(category, lat, lng);
+      return;
+    }
+
+    if (vegetationMapStatus) {
+      vegetationMapStatus.textContent = `Found ${items.length} live result${items.length > 1 ? "s" : ""} from OpenStreetMap.`;
+    }
     renderPlaceMarkers(items, category, false, lat, lng);
   })
   .catch(err => {
     console.warn("[KrishiSev] Overpass API query failed. Gracefully falling back to local database...", err);
+    if (vegetationMapStatus) {
+      vegetationMapStatus.textContent = "Live search unavailable. Showing verified local resources.";
+    }
     loadLocalFallbackData(category, lat, lng);
   });
 }
 
 function renderPlaceMarkers(items, category, isOffline, lat, lng) {
-  const greenIcon = L.divIcon({
-    className: "custom-leaflet-marker",
-    html: `<div style="background-color: #198754; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>`,
-    iconSize: [12, 12],
-    iconAnchor: [6, 6]
-  });
+  // Determine premium markers and categories
+  let color = "#16a34a";
+  let emoji = "🌱";
+  let label = "Plant Nursery";
+
+  if (category === "nursery") {
+    color = "#16a34a";
+    emoji = "🌱";
+    label = "Plant Nursery";
+  } else if (category === "fertilizer") {
+    color = "#15803d";
+    emoji = "🧪";
+    label = "Fertilizer & Seed Shop";
+  } else if (category === "office") {
+    color = "#047857";
+    emoji = "🏛️";
+    label = "Agricultural Office / Krishi Bhavan";
+  } else if (category === "service") {
+    color = "#0d9488";
+    emoji = "🚜";
+    label = "Agricultural Service Center";
+  }
 
   items.forEach(item => {
-    const marker = L.marker([item.lat, item.lng], { icon: greenIcon })
-      .bindPopup(`<div style="font-family:Inter,sans-serif;padding:2px">
-        <strong style="color:#198754;font-size:13px">${item.name}</strong>
-        <p style="margin:4px 0 0;color:#555;font-size:11px">${item.address}</p>
-        <p style="margin:4px 0 0;font-size:11px;color:#777;">
-          Type: ${item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : category.toUpperCase()}
-        </p>
-        ${isOffline ? `<p style="margin:4px 0 0;color:#dc3545;font-size:10px;font-weight:600;">⚠️ Loaded from Offline DB (Proximity: ${item.distance.toFixed(1)} km)</p>` : ""}
-      </div>`)
+    const customHtml = getAgriMarkerHtml(color, emoji);
+    const customIcon = L.divIcon({
+      className: "custom-agri-marker",
+      html: customHtml,
+      iconSize: [36, 36],
+      iconAnchor: [18, 32],
+      popupAnchor: [0, -32]
+    });
+
+    const dist = userLocation ? getDistance(userLocation.lat, userLocation.lng, item.lat, item.lng) : null;
+    const finalLabel = item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : label;
+    const sourceLabel = isOffline ? "Local Database" : "OpenStreetMap";
+
+    const popupContent = `
+      <div style="font-family:Inter,sans-serif;padding:4px;min-width:180px;">
+        <strong style="color:#1b5e20;font-size:13px;display:block;margin-bottom:4px;">${item.name}</strong>
+        <span style="font-size:10px;background:#e8f5e9;color:#1b5e20;padding:2px 6px;border-radius:4px;font-weight:600;display:inline-block;margin-bottom:6px;">${finalLabel}</span>
+        <p style="margin:4px 0 0;color:#555;font-size:11px;line-height:1.3;"><strong>📍 Address:</strong> ${item.address}</p>
+        ${dist !== null ? `<p style="margin:4px 0 0;color:#333;font-size:11px;"><strong>🚗 Distance:</strong> ${dist.toFixed(1)} km</p>` : ""}
+        <p style="margin:6px 0 0;color:#777;font-size:9.5px;border-top:1px solid #eee;padding-top:4px;"><strong>Source:</strong> ${sourceLabel}</p>
+      </div>
+    `;
+
+    const marker = L.marker([item.lat, item.lng], { icon: customIcon })
+      .bindPopup(popupContent)
       .addTo(mapInstance);
     placeMarkers.push(marker);
   });
 
+  const categoryLabel = {
+    nursery: "nurseries",
+    fertilizer: "fertilizer & seed shops",
+    office: "agricultural offices",
+    service: "agricultural services"
+  }[category] || category;
+
   const resultsInfo = document.getElementById("mapResultsInfo");
   const resultsCount = document.getElementById("mapResultsCount");
   if (resultsInfo && resultsCount) {
-    if (isOffline) {
-      resultsCount.textContent = `Offline Mode: Showing ${items.length} closest verified resources for "${category}" from local database.`;
+    if (items.length === 0) {
+      resultsCount.textContent = `No nearby ${categoryLabel} found within search area.`;
+    } else if (isOffline) {
+      resultsCount.textContent = `No live results found. Showing ${items.length} verified ${categoryLabel} from local database.`;
     } else {
-      resultsCount.textContent = `Found ${items.length} live resource${items.length > 1 ? "s" : ""} for "${category}".`;
+      resultsCount.textContent = `Found ${items.length} nearby ${categoryLabel} from OpenStreetMap.`;
     }
     resultsInfo.hidden = false;
   }
 
   if (vegetationMapStatus) {
-    if (isOffline) {
-      vegetationMapStatus.textContent = `Showing offline database resources near coordinates [${lat.toFixed(4)}, ${lng.toFixed(4)}].`;
+    if (items.length === 0) {
+      vegetationMapStatus.textContent = `No ${categoryLabel} found near your location.`;
+    } else if (isOffline) {
+      vegetationMapStatus.textContent = `Showing ${items.length} verified ${categoryLabel} from local database.`;
     } else {
-      vegetationMapStatus.textContent = `Showing ${items.length} live resource${items.length > 1 ? "s" : ""} from OpenStreetMap.`;
+      vegetationMapStatus.textContent = `Found ${items.length} live ${categoryLabel} from OpenStreetMap.`;
     }
   }
 
-  if (placeMarkers.length > 0) {
-    const group = new L.featureGroup(placeMarkers);
-    mapInstance.fitBounds(group.getBounds().pad(0.15));
+  // Adjust map bounds to include search results AND user's location
+  if (mapInstance) {
+    const points = [];
+    placeMarkers.forEach(m => points.push(m.getLatLng()));
+    if (userLocation) {
+      points.push(L.latLng(userLocation.lat, userLocation.lng));
+    }
+    
+    if (points.length > 0) {
+      const bounds = L.latLngBounds(points);
+      mapInstance.fitBounds(bounds.pad(0.15));
+    }
   }
 }
 
@@ -797,52 +904,38 @@ function initVegetationMap() {
     attribution: '© OpenStreetMap contributors'
   }).addTo(mapInstance);
 
-  showHeatmap();
+  const overlay = document.getElementById("mapOverlayMessage");
 
   if (navigator.geolocation) {
     if (vegetationMapStatus) vegetationMapStatus.textContent = "Detecting your location...";
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        if (overlay) overlay.style.display = "none";
         const userLat = pos.coords.latitude;
         const userLng = pos.coords.longitude;
         userLocation = { lat: userLat, lng: userLng };
         mapInstance.setView([userLat, userLng], 12);
-
-        const blueIcon = L.divIcon({
-          className: "user-leaflet-marker",
-          html: `<div style="background-color: #4285F4; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.4); animation: pulseMarker 1.5s infinite alternate;"></div>`,
-          iconSize: [14, 14],
-          iconAnchor: [7, 7]
-        });
-
-        const userMarker = L.marker([userLat, userLng], { icon: blueIcon })
-          .bindPopup(`<div style="font-family:Inter,sans-serif;padding:2px">
-            <strong style="color:#4285F4;font-size:13px">📍 Your Location</strong>
-            <p style="margin:4px 0 0;color:#555;font-size:11px">Use the buttons above to find nurseries &amp; agri resources near you.</p>
-          </div>`)
-          .addTo(mapInstance);
-        
-        userMarker.openPopup();
-        placeMarkers.push(userMarker);
+        updateUserLocationMarker(userLat, userLng);
 
         if (vegetationMapStatus) {
-          vegetationMapStatus.textContent = "Showing your location. Use buttons above to search nearby resources.";
+          vegetationMapStatus.textContent = "Showing your location. Searching for nearby nurseries...";
         }
+        
+        searchNearbyPlaces("nursery");
       },
       () => {
-        userLocation = { lat: 12.9716, lng: 77.5946 };
-        mapInstance.setView([12.9716, 77.5946], 12);
+        // Show friendly manual search overlay and do NOT search Bangalore by default
+        if (overlay) overlay.style.display = "flex";
         if (vegetationMapStatus) {
-          vegetationMapStatus.textContent = "Location access denied. Centered on Bangalore. Use buttons above to search.";
+          vegetationMapStatus.textContent = "Location access denied. Please search for a city manually.";
         }
       },
       { timeout: 8000 }
     );
   } else {
-    userLocation = { lat: 12.9716, lng: 77.5946 };
-    mapInstance.setView([12.9716, 77.5946], 12);
+    if (overlay) overlay.style.display = "flex";
     if (vegetationMapStatus) {
-      vegetationMapStatus.textContent = "Geolocation not supported by browser. Centered on Bangalore.";
+      vegetationMapStatus.textContent = "Geolocation not supported. Please search for a city manually.";
     }
   }
 
@@ -891,20 +984,32 @@ function loadMapSearchFromFirestore(email) {
               b.classList.remove("active");
             }
           });
-          if (searchType === "hotspots") {
-            showHeatmap();
-          } else if (searchType === "nursery") {
-            searchNearbyPlaces("nursery");
-          } else if (searchType === "fertilizer") {
-            searchNearbyPlaces("fertilizer");
-          } else if (searchType === "plantation") {
-            searchNearbyPlaces("plantation");
+          if (searchType === "nursery" || searchType === "fertilizer" || searchType === "office" || searchType === "service") {
+            searchNearbyPlaces(searchType);
           }
         }
       }
     })
     .catch((err) => console.warn("[KrishiSev] Map search load error:", err));
 }
+
+// Map search buttons
+document.querySelectorAll(".map-search-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".map-search-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    const searchType = btn.dataset.search;
+    if (searchType === "nursery" || searchType === "fertilizer" || searchType === "office" || searchType === "service") {
+      searchNearbyPlaces(searchType);
+    }
+
+    const user = getSavedUser();
+    if (user && user.email) {
+      saveMapSearchToFirestore(user.email, searchType);
+    }
+  });
+});
 
 
 /* ═══════════════════
@@ -979,6 +1084,162 @@ logoutButton.addEventListener("click", () => {
   loginPassword.value = "";
   setLoggedOut();
 });
+
+/* ═══════════════════════════════════
+   LOCATION SEARCH & AUTOCOMPLETE & SLIDESHOW
+   ═══════════════════════════════════ */
+const PRESET_LOCATIONS = {
+  "kochi": { name: "Kochi, Kerala", lat: 9.9312, lng: 76.2673 },
+  "kottayam": { name: "Kottayam, Kerala", lat: 9.5916, lng: 76.5222 },
+  "idukki": { name: "Idukki, Kerala", lat: 9.9189, lng: 77.1025 },
+  "chennai": { name: "Chennai, Tamil Nadu", lat: 13.0827, lng: 80.2707 },
+  "bengaluru": { name: "Bengaluru, Karnataka", lat: 12.9716, lng: 77.5946 },
+  "hyderabad": { name: "Hyderabad, Telangana", lat: 17.3850, lng: 78.4867 },
+  "thiruvananthapuram": { name: "Thiruvananthapuram, Kerala", lat: 8.5241, lng: 76.9366 },
+  "kozhikode": { name: "Kozhikode, Kerala", lat: 11.2588, lng: 75.7804 },
+  "thrissur": { name: "Thrissur, Kerala", lat: 10.5276, lng: 76.2144 },
+  "delhi": { name: "New Delhi, Delhi", lat: 28.6139, lng: 77.2090 },
+  "mumbai": { name: "Mumbai, Maharashtra", lat: 19.0760, lng: 72.8777 }
+};
+
+let geocodeTimeout = null;
+
+function setupLocationSearch() {
+  const mapSearchInput = document.getElementById("mapLocationSearch");
+  const mapSuggestions = document.getElementById("autocompleteSuggestions");
+  const overlaySearchInput = document.getElementById("mapOverlaySearch");
+  const overlaySuggestions = document.getElementById("overlayAutocompleteSuggestions");
+  const clearSearchBtn = document.getElementById("clearMapSearch");
+
+  if (mapSearchInput && mapSuggestions) {
+    mapSearchInput.addEventListener("input", (e) => {
+      const val = e.target.value;
+      if (val.trim()) {
+        if (clearSearchBtn) clearSearchBtn.style.display = "block";
+      } else {
+        if (clearSearchBtn) clearSearchBtn.style.display = "none";
+      }
+      handleAutocomplete(mapSearchInput, mapSuggestions, val);
+    });
+
+    // Close suggestions on click outside
+    document.addEventListener("click", (e) => {
+      if (!mapSearchInput.contains(e.target) && !mapSuggestions.contains(e.target)) {
+        mapSuggestions.style.display = "none";
+      }
+      if (overlaySearchInput && !overlaySearchInput.contains(e.target) && !overlaySuggestions.contains(e.target)) {
+        overlaySuggestions.style.display = "none";
+      }
+    });
+  }
+
+  if (clearSearchBtn && mapSearchInput) {
+    clearSearchBtn.addEventListener("click", () => {
+      mapSearchInput.value = "";
+      clearSearchBtn.style.display = "none";
+      mapSuggestions.style.display = "none";
+    });
+  }
+
+  if (overlaySearchInput && overlaySuggestions) {
+    overlaySearchInput.addEventListener("input", (e) => {
+      handleAutocomplete(overlaySearchInput, overlaySuggestions, e.target.value);
+    });
+  }
+}
+
+function handleAutocomplete(inputElement, suggestionsElement, query) {
+  query = query.trim().toLowerCase();
+  if (query.length < 2) {
+    suggestionsElement.style.display = "none";
+    return;
+  }
+
+  const matches = [];
+  Object.keys(PRESET_LOCATIONS).forEach(key => {
+    if (key.includes(query)) {
+      matches.push(PRESET_LOCATIONS[key]);
+    }
+  });
+
+  renderSuggestions(inputElement, suggestionsElement, matches);
+
+  clearTimeout(geocodeTimeout);
+  geocodeTimeout = setTimeout(() => {
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=in`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data || data.length === 0) return;
+        const results = data.map(item => ({
+          name: item.display_name,
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon)
+        }));
+        const combined = [...matches];
+        results.forEach(res => {
+          if (!combined.some(c => Math.abs(c.lat - res.lat) < 0.01 && Math.abs(c.lng - res.lng) < 0.01)) {
+            combined.push(res);
+          }
+        });
+        renderSuggestions(inputElement, suggestionsElement, combined);
+      })
+      .catch(err => console.warn("Geocoding fetch error:", err));
+  }, 450);
+}
+
+function renderSuggestions(inputElement, suggestionsElement, list) {
+  if (list.length === 0) {
+    suggestionsElement.style.display = "none";
+    return;
+  }
+  suggestionsElement.innerHTML = "";
+  list.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "suggestion-item";
+    div.textContent = item.name;
+    div.addEventListener("click", () => {
+      inputElement.value = item.name;
+      suggestionsElement.style.display = "none";
+      selectNewLocation(item.lat, item.lng, item.name);
+    });
+    suggestionsElement.appendChild(div);
+  });
+  suggestionsElement.style.display = "block";
+}
+
+function selectNewLocation(lat, lng, name) {
+  const overlay = document.getElementById("mapOverlayMessage");
+  if (overlay) overlay.style.display = "none";
+
+  userLocation = { lat, lng };
+  
+  if (mapInstance) {
+    mapInstance.setView([lat, lng], 12);
+    updateUserLocationMarker(lat, lng);
+  }
+
+  // Trigger search on selected location
+  const activeBtn = document.querySelector(".map-search-btn.active");
+  const category = activeBtn ? activeBtn.dataset.search : "nursery";
+  searchNearbyPlaces(category);
+}
+
+// Automatic Login Slideshow logic
+function initLoginSlideshow() {
+  const slides = document.querySelectorAll("#loginScreen .slide");
+  if (slides.length > 0) {
+    let currentSlide = 0;
+    setInterval(() => {
+      slides[currentSlide].classList.remove("active");
+      currentSlide = (currentSlide + 1) % slides.length;
+      slides[currentSlide].classList.add("active");
+    }, 4500);
+  }
+}
+
+// Call on startup
+setupLocationSearch();
+initLoginSlideshow();
 
 /* ═══════════════════
    CHATBOT

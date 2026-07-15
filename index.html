@@ -18,34 +18,63 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <script>
+    if (localStorage.getItem("theme") === "dark") {
+      document.body.classList.add("dark");
+    }
+  </script>
   <!-- ═══ LOGIN SCREEN ═══ -->
   <section class="login-screen" id="loginScreen">
+    <!-- Left side: Slideshow Hero -->
+    <div class="login-hero">
+      <div class="slideshow-container">
+        <div class="slide fade active" style="background-image: url('assets/slideshow_1.png');"></div>
+        <div class="slide fade" style="background-image: url('assets/slideshow_2.png');"></div>
+        <div class="slide fade" style="background-image: url('assets/slideshow_3.png');"></div>
+        <div class="slide fade" style="background-image: url('assets/slideshow_4.png');"></div>
+        <div class="slide fade" style="background-image: url('assets/slideshow_5.png');"></div>
+        <div class="slide fade" style="background-image: url('assets/slideshow_6.png');"></div>
+        <div class="slide fade" style="background-image: url('assets/slideshow_7.png');"></div>
+      </div>
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <span class="hero-badge">🌱 KRISHISEV</span>
+        <h1>Smart Agricultural Assistant for Indian Farmers</h1>
+        <p>Empowering farmers with AI-powered crop advisory, disease detection, soil analysis, and nearby agricultural resource discovery.</p>
+      </div>
+    </div>
+    
+    <!-- Right side: Login Panel -->
     <div class="login-panel">
-      <div class="login-brand">
-        <span class="brand-mark large">K</span>
-        <div>
-          <p class="eyebrow">KRISHISEV</p>
+      <div class="login-brand-header">
+        <div class="brand-logo">
+          <span class="brand-mark large">K</span>
+          <div>
+            <p class="eyebrow">KRISHISEV</p>
+            <small class="brand-tagline">Smart Farm Desk</small>
+          </div>
         </div>
+        <button class="icon-button" id="loginThemeToggle" type="button" title="Toggle theme" aria-label="Toggle theme">☼</button>
       </div>
       <form class="login-card" id="loginForm">
         <div>
           <p class="eyebrow">Secure sign in</p>
-          <h2>Login with email</h2>
+          <h2>Welcome back</h2>
         </div>
-      <label>
-        Email id
-      <input id="loginEmail" type="email" placeholder="name@gmail.com" autocomplete="email" required />
-      <small class="field-hint">Use a Gmail address only. Example: name@gmail.com</small>
-      </label>
-      <label>
-        Password
-        <input id="loginPassword" type="password" placeholder="Minimum 4 characters" autocomplete="current-password" required />
-      </label>
-      <div class="auth-actions">
-        <button class="primary-button full" type="submit">Login</button>
-        <button class="ghost-button full" type="button" id="registerButton">Create account</button>
-      </div>
-      <p class="login-error" id="loginError" role="alert"></p>
+        <label>
+          Email ID
+          <input id="loginEmail" type="email" placeholder="name@gmail.com" autocomplete="email" required />
+          <small class="field-hint">Use a Gmail address only. Example: name@gmail.com</small>
+        </label>
+        <label>
+          Password
+          <input id="loginPassword" type="password" placeholder="Minimum 4 characters" autocomplete="current-password" required />
+        </label>
+        <div class="auth-actions">
+          <button class="primary-button full" type="submit">Login</button>
+          <button class="ghost-button full" type="button" id="registerButton">Create account</button>
+        </div>
+        <p class="login-error" id="loginError" role="alert"></p>
       </form>
     </div>
   </section>
@@ -450,42 +479,77 @@
           <div class="tool-panel map-panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">OpenStreetMap vegetation layer</p>
-                <h2>Plantation Map & Nearby Shops</h2>
+                <p class="eyebrow">Local Resource Finder</p>
+                <h2>Nearby Agricultural Resources</h2>
               </div>
               <span class="status-pill compact">Interactive</span>
             </div>
 
             <!-- Map Search Controls -->
             <div class="map-search-controls" id="mapSearchControls">
-              <button class="map-search-btn active" id="mapBtnHotspots" data-search="hotspots">
-                <span>🌿</span> Plantation Hotspots
-              </button>
-              <button class="map-search-btn" id="mapBtnNursery" data-search="nursery">
+              <button class="map-search-btn active" id="mapBtnNursery" data-search="nursery">
                 <span>🌱</span> Nearby Nurseries
               </button>
               <button class="map-search-btn" id="mapBtnFertilizer" data-search="fertilizer">
-                <span>🧪</span> Fertilizer Shops
+                <span>🧪</span> Fertilizer & Seed Shops
               </button>
-              <button class="map-search-btn" id="mapBtnPlantation" data-search="plantation">
-                <span>🏪</span> Plantation Shops
+              <button class="map-search-btn" id="mapBtnOffice" data-search="office">
+                <span>🏛️</span> Agricultural Offices
+              </button>
+              <button class="map-search-btn" id="mapBtnService" data-search="service">
+                <span>🚜</span> Agricultural Services
               </button>
             </div>
 
             <div class="map-layout">
-              <div class="vegetation-map" id="vegetationMap" aria-label="World vegetation suitability map"></div>
-              <div class="map-sidecard">
-                <p class="map-kicker">What the green means</p>
-                <strong>More plantation, more vegetation</strong>
-                <p class="map-copy">
-                  The green overlay highlights regions that are generally more suitable for plantation and dense vegetation.
-                  Click the buttons above to search for nearby nurseries, fertilizer shops, and plantation stores based on your location.
-                </p>
-                <div class="map-legend">
-                  <span><i class="legend-swatch dense"></i> Dense plantation</span>
-                  <span><i class="legend-swatch suitable"></i> Suitable vegetation</span>
-                  <span><i class="legend-swatch light"></i> Lower coverage</span>
+              <div class="map-container-wrapper" style="position: relative; display: block; border-radius: 8px; border: 1px solid var(--line); overflow: hidden; height: 450px;">
+                <!-- Manual Location Search Overlay -->
+                <div class="map-search-bar" id="mapSearchBar">
+                  <div class="search-input-group">
+                    <span style="font-size: 14px; margin-right: 6px;">🔍</span>
+                    <input type="text" id="mapLocationSearch" placeholder="Search city or district (e.g. Kochi)..." autocomplete="off" />
+                    <button id="clearMapSearch" type="button">×</button>
+                  </div>
+                  <div class="autocomplete-suggestions" id="autocompleteSuggestions"></div>
                 </div>
+
+                <!-- Leaflet Map element -->
+                <div class="vegetation-map" id="vegetationMap" aria-label="Nearby agricultural resources map" style="height: 100%; border: none; border-radius: 0; display: block; position: relative;"></div>
+
+                <!-- Friendly Permission Denied Overlay -->
+                <div class="map-overlay-message" id="mapOverlayMessage">
+                  <div class="overlay-card">
+                    <span style="font-size: 40px; margin-bottom: 8px;">📍</span>
+                    <h3>Location Access Required</h3>
+                    <p>
+                      Location permission is required to discover nearby agricultural resources automatically. Please search for a city/district manually:
+                    </p>
+                    <div style="width: 100%; display: flex; flex-direction: column; gap: 4px; position: relative;">
+                      <div class="search-input-group" style="box-shadow: none;">
+                        <span style="font-size: 14px; margin-right: 6px;">🔍</span>
+                        <input type="text" id="mapOverlaySearch" placeholder="Type city or district..." autocomplete="off" />
+                      </div>
+                      <div class="autocomplete-suggestions" id="overlayAutocompleteSuggestions"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="map-sidecard">
+                <p class="map-kicker">Nearby Agricultural Resources</p>
+                <strong>Local Resource Finder</strong>
+                <p class="map-copy" style="margin-bottom: 12px; line-height: 1.4;">
+                  This map helps farmers discover agricultural facilities near their current location. Use the buttons above to locate resources:
+                </p>
+                <ul style="margin: 0 0 16px; padding-left: 20px; font-size: 13px; color: rgba(255,255,255,0.72); line-height: 1.5; display: flex; flex-direction: column; gap: 6px; text-align: left;">
+                  <li><strong>🌱 Nurseries</strong>: Find plant nurseries and botanical centers.</li>
+                  <li><strong>🧪 Fertilizer & Seed Shops</strong>: Locates seed outlets, fertilizer depots, and crop inputs.</li>
+                  <li><strong>🏛️ Agricultural Offices</strong>: Finds government Krishi Bhavans, extension offices, and research universities.</li>
+                  <li><strong>🚜 Agricultural Services</strong>: Locates tractor rentals, equipment repair, and farming services.</li>
+                </ul>
+                <p class="map-copy" style="font-size: 12px; border-top: 1px solid var(--line); padding-top: 12px; color: rgba(255,255,255,0.72); margin: 0;">
+                  The application searches nearby resources using OpenStreetMap and falls back to locally stored verified resources when live data is offline.
+                </p>
                 <div class="map-results-info" id="mapResultsInfo" hidden>
                   <p class="map-results-count" id="mapResultsCount"></p>
                 </div>

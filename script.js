@@ -498,6 +498,7 @@ const LOCAL_AGRI_DATASET = [
   { name: "Pusa Agricultural Equipment Service Depot", lat: 28.6315, lng: 77.1510, address: "IARI Campus, Pusa, New Delhi", type: "service" }
 ];
 
+
 function renderVegetationFallback(message) {
   if (vegetationMapElement) {
     vegetationMapElement.innerHTML = `
@@ -507,16 +508,41 @@ function renderVegetationFallback(message) {
       </div>
     `;
   }
-  if (vegetationMapStatus) {
-    vegetationMapStatus.textContent = message;
+  setMapStatus(message);
+}
+
+/* ── Floating toast status helper ── */
+let _toastTimer = null;
+function setMapStatus(message, persist) {
+  const toast = document.getElementById("mapStatusToast");
+  if (!toast) return;
+
+  // Clear any running auto-dismiss timer
+  if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+
+  toast.textContent = message;
+  toast.classList.add("visible");
+
+  if (!persist) {
+    _toastTimer = setTimeout(() => {
+      toast.classList.remove("visible");
+    }, 5500);
   }
 }
+
+function hideMapStatus() {
+  const toast = document.getElementById("mapStatusToast");
+  if (toast) toast.classList.remove("visible");
+  if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+}
+
 
 function clearPlaceMarkers() {
   if (mapInstance) {
     placeMarkers.forEach(m => mapInstance.removeLayer(m));
   }
   placeMarkers = [];
+  closeInfoPanel();
 }
 
 function searchNearbyPlaces(category) {
@@ -535,15 +561,11 @@ function searchNearbyPlaces(category) {
   if (!userLocation) {
     const overlay = document.getElementById("mapOverlayMessage");
     if (overlay) overlay.style.display = "flex";
-    if (vegetationMapStatus) {
-      vegetationMapStatus.textContent = "Location access required. Please search for a city manually.";
-    }
+    setMapStatus("Location access required. Please search for a city manually.");
     return;
   }
 
-  if (vegetationMapStatus) {
-    vegetationMapStatus.innerHTML = `<span class="map-loading-spinner"></span>Searching for nearby ${label}...`;
-  }
+  setMapStatus(`⚙️ Searching for nearby ${label}...`, true);
 
   updateUserLocationMarker(userLocation.lat, userLocation.lng);
   doOsmSearch(category, userLocation.lat, userLocation.lng);
@@ -708,10 +730,8 @@ function doOsmSearch(category, lat, lng, radiusIndex) {
   };
   const label = labelMap[category] || category;
 
-  if (vegetationMapStatus) {
     const radiusKm = radius / 1000;
-    vegetationMapStatus.innerHTML = `<span class="map-loading-spinner"></span>Searching for ${label} within ${radiusKm} km...`;
-  }
+  setMapStatus(`⚙️ Searching for ${label} within ${radiusKm} km...`, true);
 
   mapInstance.setView([lat, lng], 12);
   updateUserLocationMarker(lat, lng);
@@ -741,9 +761,7 @@ function doOsmSearch(category, lat, lng, radiusIndex) {
       }
       // All radii exhausted → fall back to local database
       console.log("[KrishiSev] No live results found. Loading from local database...");
-      if (vegetationMapStatus) {
-        vegetationMapStatus.textContent = `No live results found. Showing verified local resources.`;
-      }
+      setMapStatus("No live results found. Showing verified local resources.");
       loadLocalFallbackData(category, lat, lng);
       return;
     }
@@ -763,8 +781,10 @@ function doOsmSearch(category, lat, lng, radiusIndex) {
       const street = tags["addr:street"] || "";
       const city = tags["addr:city"] || tags["addr:town"] || tags["addr:village"] || "";
       const address = [street, city].filter(Boolean).join(", ") || "Located nearby";
+      const phone = tags.phone || tags["contact:phone"] || null;
+      const hours = tags.opening_hours || null;
 
-      return { name, lat: elLat, lng: elLng, address };
+      return { name, lat: elLat, lng: elLng, address, phone, hours };
     }).filter(item => item.lat && item.lng);
 
     if (items.length === 0) {
@@ -776,42 +796,95 @@ function doOsmSearch(category, lat, lng, radiusIndex) {
       return;
     }
 
-    if (vegetationMapStatus) {
-      vegetationMapStatus.textContent = `Found ${items.length} live result${items.length > 1 ? "s" : ""} from OpenStreetMap.`;
-    }
+    setMapStatus(`✅ Found ${items.length} live result${items.length > 1 ? "s" : ""} from OpenStreetMap.`);
     renderPlaceMarkers(items, category, false, lat, lng);
   })
   .catch(err => {
     console.warn("[KrishiSev] Overpass API query failed. Gracefully falling back to local database...", err);
-    if (vegetationMapStatus) {
-      vegetationMapStatus.textContent = "Live search unavailable. Showing verified local resources.";
-    }
+    setMapStatus("Live search unavailable. Showing verified local resources.");
     loadLocalFallbackData(category, lat, lng);
   });
 }
 
+/* ── Info Panel helpers ── */
+let _selectedMarkerEl = null;
+
+function openInfoPanel(data) {
+  const panel = document.getElementById("mapInfoPanel");
+  const body  = document.getElementById("mapInfoBody");
+  if (!panel || !body) return;
+
+  const statusHtml = data.hours
+    ? `<span class="map-info-status-open">Open</span>`
+    : `<span class="map-info-status-unknown">Unknown</span>`;
+
+  body.innerHTML = `
+    <span class="map-info-category-icon">${data.emoji}</span>
+    <h3 class="map-info-name">${data.name}</h3>
+    <span class="map-info-category-tag">${data.category}</span>
+    <hr class="map-info-divider">
+    <div class="map-info-row">
+      <span class="map-info-row-icon">📍</span>
+      <div><span class="map-info-row-label">Address</span>${data.address}</div>
+    </div>
+    ${data.distance !== null ? `
+    <div class="map-info-row">
+      <span class="map-info-row-icon">🚗</span>
+      <div><span class="map-info-row-label">Distance</span>${data.distance.toFixed(1)} km</div>
+    </div>` : ""}
+    ${data.phone ? `
+    <div class="map-info-row">
+      <span class="map-info-row-icon">📞</span>
+      <div><span class="map-info-row-label">Contact</span>${data.phone}</div>
+    </div>` : ""}
+    ${data.hours ? `
+    <div class="map-info-row">
+      <span class="map-info-row-icon">🕐</span>
+      <div><span class="map-info-row-label">Hours</span>${data.hours}</div>
+    </div>` : ""}
+    <div class="map-info-row">
+      <span class="map-info-row-icon">📊</span>
+      <div><span class="map-info-row-label">Status</span>${statusHtml}</div>
+    </div>
+    <div class="map-info-row">
+      <span class="map-info-row-icon">🌐</span>
+      <div><span class="map-info-row-label">Coords</span>${data.lat.toFixed(5)}, ${data.lng.toFixed(5)}</div>
+    </div>
+    <div class="map-info-source">
+      <span>📦</span> <span class="map-info-row-label">Source:</span> ${data.source}
+    </div>
+  `;
+
+  panel.classList.add("open");
+}
+
+function closeInfoPanel() {
+  const panel = document.getElementById("mapInfoPanel");
+  if (panel) panel.classList.remove("open");
+  // Remove highlight from previously selected marker
+  if (_selectedMarkerEl) {
+    _selectedMarkerEl.classList.remove("agri-marker-selected");
+    _selectedMarkerEl = null;
+  }
+}
+
 function renderPlaceMarkers(items, category, isOffline, lat, lng) {
-  // Determine premium markers and categories
+  // Close any open info panel when loading new results
+  closeInfoPanel();
+
+  // Determine category styling
   let color = "#16a34a";
   let emoji = "🌱";
   let label = "Plant Nursery";
 
   if (category === "nursery") {
-    color = "#16a34a";
-    emoji = "🌱";
-    label = "Plant Nursery";
+    color = "#16a34a"; emoji = "🌱"; label = "Plant Nursery";
   } else if (category === "fertilizer") {
-    color = "#15803d";
-    emoji = "🧪";
-    label = "Fertilizer & Seed Shop";
+    color = "#15803d"; emoji = "🧪"; label = "Fertilizer & Seed Shop";
   } else if (category === "office") {
-    color = "#047857";
-    emoji = "🏛️";
-    label = "Agricultural Office / Krishi Bhavan";
+    color = "#047857"; emoji = "🏛️"; label = "Agricultural Office / Krishi Bhavan";
   } else if (category === "service") {
-    color = "#0d9488";
-    emoji = "🚜";
-    label = "Agricultural Service Center";
+    color = "#0d9488"; emoji = "🚜"; label = "Agricultural Service Center";
   }
 
   items.forEach(item => {
@@ -828,19 +901,40 @@ function renderPlaceMarkers(items, category, isOffline, lat, lng) {
     const finalLabel = item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : label;
     const sourceLabel = isOffline ? "Local Database" : "OpenStreetMap";
 
-    const popupContent = `
-      <div style="font-family:Inter,sans-serif;padding:4px;min-width:180px;">
-        <strong style="color:#1b5e20;font-size:13px;display:block;margin-bottom:4px;">${item.name}</strong>
-        <span style="font-size:10px;background:#e8f5e9;color:#1b5e20;padding:2px 6px;border-radius:4px;font-weight:600;display:inline-block;margin-bottom:6px;">${finalLabel}</span>
-        <p style="margin:4px 0 0;color:#555;font-size:11px;line-height:1.3;"><strong>📍 Address:</strong> ${item.address}</p>
-        ${dist !== null ? `<p style="margin:4px 0 0;color:#333;font-size:11px;"><strong>🚗 Distance:</strong> ${dist.toFixed(1)} km</p>` : ""}
-        <p style="margin:6px 0 0;color:#777;font-size:9.5px;border-top:1px solid #eee;padding-top:4px;"><strong>Source:</strong> ${sourceLabel}</p>
-      </div>
-    `;
-
     const marker = L.marker([item.lat, item.lng], { icon: customIcon })
-      .bindPopup(popupContent)
       .addTo(mapInstance);
+
+    // Click handler → open info panel instead of popup
+    marker.on("click", function () {
+      // Remove previous highlight
+      if (_selectedMarkerEl) {
+        _selectedMarkerEl.classList.remove("agri-marker-selected");
+      }
+      // Highlight this marker
+      const el = marker.getElement();
+      if (el) {
+        el.classList.add("agri-marker-selected");
+        _selectedMarkerEl = el;
+      }
+
+      // Smooth pan to marker
+      mapInstance.panTo([item.lat, item.lng], { animate: true, duration: 0.5 });
+
+      // Open info panel with resource data
+      openInfoPanel({
+        name: item.name,
+        category: finalLabel,
+        emoji: emoji,
+        address: item.address || "Located nearby",
+        distance: dist,
+        phone: item.phone || null,
+        hours: item.hours || null,
+        lat: item.lat,
+        lng: item.lng,
+        source: sourceLabel
+      });
+    });
+
     placeMarkers.push(marker);
   });
 
@@ -851,27 +945,12 @@ function renderPlaceMarkers(items, category, isOffline, lat, lng) {
     service: "agricultural services"
   }[category] || category;
 
-  const resultsInfo = document.getElementById("mapResultsInfo");
-  const resultsCount = document.getElementById("mapResultsCount");
-  if (resultsInfo && resultsCount) {
-    if (items.length === 0) {
-      resultsCount.textContent = `No nearby ${categoryLabel} found within search area.`;
-    } else if (isOffline) {
-      resultsCount.textContent = `No live results found. Showing ${items.length} verified ${categoryLabel} from local database.`;
-    } else {
-      resultsCount.textContent = `Found ${items.length} nearby ${categoryLabel} from OpenStreetMap.`;
-    }
-    resultsInfo.hidden = false;
-  }
-
-  if (vegetationMapStatus) {
-    if (items.length === 0) {
-      vegetationMapStatus.textContent = `No ${categoryLabel} found near your location.`;
-    } else if (isOffline) {
-      vegetationMapStatus.textContent = `Showing ${items.length} verified ${categoryLabel} from local database.`;
-    } else {
-      vegetationMapStatus.textContent = `Found ${items.length} live ${categoryLabel} from OpenStreetMap.`;
-    }
+  if (items.length === 0) {
+    setMapStatus(`No ${categoryLabel} found near your location.`);
+  } else if (isOffline) {
+    setMapStatus(`💾 Showing ${items.length} verified ${categoryLabel} from local database.`);
+  } else {
+    setMapStatus(`✅ Found ${items.length} live ${categoryLabel} from OpenStreetMap.`);
   }
 
   // Adjust map bounds to include search results AND user's location
@@ -889,6 +968,7 @@ function renderPlaceMarkers(items, category, isOffline, lat, lng) {
   }
 }
 
+
 function initVegetationMap() {
   if (!vegetationMapElement) return;
 
@@ -904,10 +984,21 @@ function initVegetationMap() {
     attribution: '© OpenStreetMap contributors'
   }).addTo(mapInstance);
 
+  // ── Info panel close button ──
+  const infoPanelCloseBtn = document.getElementById("mapInfoClose");
+  if (infoPanelCloseBtn) {
+    infoPanelCloseBtn.addEventListener("click", closeInfoPanel);
+  }
+
+  // ── Click on empty map area → close panel ──
+  mapInstance.on("click", function () {
+    closeInfoPanel();
+  });
+
   const overlay = document.getElementById("mapOverlayMessage");
 
   if (navigator.geolocation) {
-    if (vegetationMapStatus) vegetationMapStatus.textContent = "Detecting your location...";
+    setMapStatus("Detecting your location...", true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         if (overlay) overlay.style.display = "none";
@@ -917,26 +1008,20 @@ function initVegetationMap() {
         mapInstance.setView([userLat, userLng], 12);
         updateUserLocationMarker(userLat, userLng);
 
-        if (vegetationMapStatus) {
-          vegetationMapStatus.textContent = "Showing your location. Searching for nearby nurseries...";
-        }
+        setMapStatus("📍 Location found. Searching for nearby nurseries...", true);
         
         searchNearbyPlaces("nursery");
       },
       () => {
         // Show friendly manual search overlay and do NOT search Bangalore by default
         if (overlay) overlay.style.display = "flex";
-        if (vegetationMapStatus) {
-          vegetationMapStatus.textContent = "Location access denied. Please search for a city manually.";
-        }
+        setMapStatus("Location access denied. Please search for a city manually.");
       },
       { timeout: 8000 }
     );
   } else {
     if (overlay) overlay.style.display = "flex";
-    if (vegetationMapStatus) {
-      vegetationMapStatus.textContent = "Geolocation not supported. Please search for a city manually.";
-    }
+    setMapStatus("Geolocation not supported. Please search for a city manually.");
   }
 
   const user = getSavedUser();
@@ -1779,3 +1864,46 @@ soilUpload.addEventListener("change", () => {
   };
   reader.readAsDataURL(file);
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   DASHBOARD HERO SLIDESHOW
+   ═══════════════════════════════════════════════════════════════ */
+
+(function initDashboardHeroSlideshow() {
+  const slides = Array.from(
+    document.querySelectorAll('#heroSlideshow .hero-slide')
+  );
+  if (slides.length < 2) return; // nothing to rotate
+
+  let current = 0;
+
+  // Pre-load all images before starting rotation
+  const imageSrcs = slides.map(s => {
+    const url = (s.style.backgroundImage || '').replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
+    return url;
+  });
+
+  let loaded = 0;
+  function onLoaded() {
+    loaded++;
+    if (loaded === imageSrcs.length) startSlideshow();
+  }
+
+  imageSrcs.forEach(src => {
+    if (!src) { onLoaded(); return; }
+    const img = new Image();
+    img.onload = img.onerror = onLoaded;
+    img.src = src;
+  });
+
+  function startSlideshow() {
+    // Make sure first slide is active
+    slides.forEach((s, i) => s.classList.toggle('active', i === 0));
+
+    setInterval(() => {
+      slides[current].classList.remove('active');
+      current = (current + 1) % slides.length;
+      slides[current].classList.add('active');
+    }, 3500); // rotate every 3.5 seconds
+  }
+})();

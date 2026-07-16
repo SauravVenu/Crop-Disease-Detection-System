@@ -38,7 +38,7 @@
       </div>
       <div class="hero-overlay"></div>
       <div class="hero-content">
-        <span class="hero-badge">🌱 KRISHISEV</span>
+        <span class="hero-badge">KRISHISEV</span>
         <h1>Smart Agricultural Assistant for Indian Farmers</h1>
         <p>Empowering farmers with AI-powered crop advisory, disease detection, soil analysis, and nearby agricultural resource discovery.</p>
       </div>
@@ -138,16 +138,12 @@
           </div>
           <div class="hero-overlay-gradient"></div>
           <div class="hero-copy">
-            <p class="status-pill">🇮🇳 Built for Indian Agriculture</p>
-            <h2>Smarter Farming.<br>Better Harvests.</h2>
-            <p class="hero-subheading">Everything farmers need in one intelligent platform.</p>
+            <p class="hero-badge-plain">🇮🇳 Built for Indian Agriculture</p>
+            <h2>Your AI Farming Companion</h2>
+            <p class="hero-subheading">Helping every farmer grow with confidence.</p>
             <p>
-              From crop recommendations and soil analysis to disease detection, AI assistance, and nearby agricultural resources, KRISHISEV helps farmers make informed decisions every day.
+              Analyze crops, monitor soil health, detect diseases, and connect with nearby agricultural resources using one intelligent farming platform.
             </p>
-            <div class="hero-actions">
-              <button class="primary-button" data-target="view-crop">Recommend crop</button>
-              <button class="ghost-button" data-target="view-disease">Scan leaf image</button>
-            </div>
           </div>
         </section>
 
@@ -533,15 +529,19 @@
                     </div>
                   </div>
                 </div>
+
+                <!-- Resource Info Panel (slides in from right) -->
+                <div class="map-info-panel" id="mapInfoPanel" aria-live="polite">
+                  <button class="map-info-close" id="mapInfoClose" type="button" aria-label="Close panel">&times;</button>
+                  <div class="map-info-body" id="mapInfoBody">
+                    <!-- Populated by JS on marker click -->
+                  </div>
+                </div>
+
+                <!-- Floating Status Toast (bottom-right of map) -->
+                <div class="map-status-toast" id="mapStatusToast"></div>
               </div>
 
-              <!-- Status bar below full-width map -->
-              <div class="map-status-bar">
-                <div class="map-results-info" id="mapResultsInfo" hidden>
-                  <p class="map-results-count" id="mapResultsCount"></p>
-                </div>
-                <p class="map-status" id="vegetationMapStatus">Loading Map...</p>
-              </div>
             </div>
           </div>
         </section>

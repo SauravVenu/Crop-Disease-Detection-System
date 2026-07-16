@@ -497,7 +497,7 @@
               </button>
             </div>
 
-            <div class="map-layout map-layout-fullwidth">
+            <div class="map-layout">
               <div class="map-container-wrapper" style="position: relative; display: block; border-radius: 8px; border: 1px solid var(--line); overflow: hidden; height: 500px; width: 100%;">
                 <!-- Manual Location Search Overlay -->
                 <div class="map-search-bar" id="mapSearchBar">
@@ -529,19 +529,24 @@
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <!-- Resource Info Panel (slides in from right) -->
+              <!-- Right-side Sidebar for Info Panel and Status Toast -->
+              <div class="map-sidebar">
+                <!-- Resource Info Panel -->
                 <div class="map-info-panel" id="mapInfoPanel" aria-live="polite">
                   <button class="map-info-close" id="mapInfoClose" type="button" aria-label="Close panel">&times;</button>
                   <div class="map-info-body" id="mapInfoBody">
-                    <!-- Populated by JS on marker click -->
+                    <div style="text-align: center; color: var(--muted); margin-top: 40px;">
+                      <span style="font-size: 32px; display: block; margin-bottom: 12px;">🗺️</span>
+                      Select a resource on the map to view details here.
+                    </div>
                   </div>
                 </div>
 
-                <!-- Floating Status Toast (bottom-right of map) -->
+                <!-- Status Toast (Now a card below the info panel) -->
                 <div class="map-status-toast" id="mapStatusToast"></div>
               </div>
-
             </div>
           </div>
         </section>

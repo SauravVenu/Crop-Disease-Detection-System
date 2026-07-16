@@ -860,7 +860,16 @@ function openInfoPanel(data) {
 
 function closeInfoPanel() {
   const panel = document.getElementById("mapInfoPanel");
+  const body = document.getElementById("mapInfoBody");
   if (panel) panel.classList.remove("open");
+  if (body) {
+    body.innerHTML = `
+      <div style="text-align: center; color: var(--muted); margin-top: 40px;">
+        <span style="font-size: 32px; display: block; margin-bottom: 12px;">🗺️</span>
+        Select a resource on the map to view details here.
+      </div>
+    `;
+  }
   // Remove highlight from previously selected marker
   if (_selectedMarkerEl) {
     _selectedMarkerEl.classList.remove("agri-marker-selected");
@@ -994,6 +1003,11 @@ function initVegetationMap() {
   mapInstance.on("click", function () {
     closeInfoPanel();
   });
+
+  // Ensure map layout is properly calculated for the new grid layout
+  setTimeout(() => {
+    if (mapInstance) mapInstance.invalidateSize();
+  }, 250);
 
   const overlay = document.getElementById("mapOverlayMessage");
 
